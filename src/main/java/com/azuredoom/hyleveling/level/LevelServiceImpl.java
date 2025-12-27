@@ -21,8 +21,6 @@ public class LevelServiceImpl implements LevelService {
 
     private final Map<UUID, PlayerLevelData> cache = new ConcurrentHashMap<>();
 
-    private final List<LevelListener> levelListeners = new ArrayList<>();
-
     private final List<LevelDownListener> levelDownListeners = new ArrayList<>();
 
     private final List<LevelUpListener> levelUpListeners = new ArrayList<>();
@@ -240,28 +238,6 @@ public class LevelServiceImpl implements LevelService {
         } else if (newLevel < oldLevel) {
             levelDownListeners.forEach(l -> l.onLevelDown(id, newLevel));
         }
-    }
-
-    /**
-     * Registers a {@link LevelListener} to be notified of player level-up events. The registered listener's
-     * {@code onLevelUp} method will be triggered when a player's level increases.
-     *
-     * @param listener The {@link LevelListener} to be registered for receiving notifications about level-up events.
-     */
-    @Override
-    public void registerListener(LevelListener listener) {
-        levelListeners.add(listener);
-    }
-
-    /**
-     * Unregisters a previously registered {@link LevelListener}. After this method is invoked, the specified listener
-     * will no longer receive notifications about player level-up events.
-     *
-     * @param listener The {@link LevelListener} to be unregistered from receiving level-up notifications.
-     */
-    @Override
-    public void unregisterListener(LevelListener listener) {
-        levelListeners.remove(listener);
     }
 
     /**

@@ -28,10 +28,6 @@ public interface LevelService {
 
     void setXp(UUID playerId, long xp);
 
-    void registerListener(LevelListener listener);
-
-    void unregisterListener(LevelListener listener);
-
     void registerXpGainListener(XpGainListener listener);
 
     void registerXpLossListener(XpLossListener listener);
