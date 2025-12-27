@@ -32,6 +32,8 @@ public class HyLevelingConfig {
         public Linear linear = new Linear();
 
         public Table table = new Table();
+
+        public Custom custom = new Custom();
     }
 
     public static class Exponential {
@@ -49,5 +51,14 @@ public class HyLevelingConfig {
     public static class Table {
 
         public String file = "levels.csv";
+    }
+
+    public static class Custom {
+
+        public String xpForLevel = "";
+
+        public java.util.Map<String, Double> constants = new java.util.HashMap<>();
+
+        public int maxLevel = 100000;
     }
 }

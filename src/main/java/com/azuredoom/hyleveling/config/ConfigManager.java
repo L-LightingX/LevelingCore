@@ -25,6 +25,10 @@ public final class ConfigManager {
     private static final String DEFAULT_YAML = """
         # HyLeveling configuration
         #
+        # =========================
+        # Database Configuration
+        # =========================
+        #
         # Supported JDBC URLs:
         #   H2 (file):      jdbc:h2:file:./data/hyleveling;MODE=PostgreSQL
         #   MySQL:          jdbc:mysql://host:3306/dbname
@@ -40,15 +44,20 @@ public final class ConfigManager {
           username: ""
           password: ""
           maxPoolSize: 10
-        # Leveling formula configuration
+
+        # =========================
+        # Leveling Formula
+        # =========================
         #
         # Supported types:
         #   - EXPONENTIAL: XP floor at level L is baseXp * (L - 1) ^ exponent
         #   - LINEAR:      XP floor at level L is xpPerLevel * (L - 1)
-        #   - TABLE
+        #   - TABLE:       XP floor at level L is defined in a CSV file
+        #   - CUSTOM:      XP floor at level L is defined by a math expression
         #
         # Notes:
         # - XP migration is enabled by default. Set migrateXP to false to disable.
+        # - Changing the formula will recompute XP to preserve player levels.
         #
         formula:
           type: "EXPONENTIAL"
@@ -59,7 +68,29 @@ public final class ConfigManager {
           linear:
             xpPerLevel: 100
           table:
+            # CSV file relative to the data directory
             file: "levels.csv"
+          custom:
+            # Expression returns the XP floor for a level.
+            #
+            # Available variables:
+            #   - level      (current level, integer >= 1)
+            #
+            # You may also reference any constants defined below.
+            #
+            # Example:
+            #   exp(a * (level - 1)) * b / c
+            #
+            xpForLevel: "exp(a * (level - 1)) * b / c"
+
+            # Optional constants referenced in the expression
+            constants:
+              a: 0.12
+              b: 100
+              c: 1
+
+            # Maximum level supported by this formula (used for binary search)
+            maxLevel: 100000
         """;
 
     private ConfigManager() {}

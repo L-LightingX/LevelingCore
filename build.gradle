@@ -21,6 +21,7 @@ dependencies {
     implementation 'com.zaxxer:HikariCP:7.0.2'
     implementation 'org.slf4j:slf4j-simple:2.0.17'
     implementation 'org.yaml:snakeyaml:2.5'
+    implementation 'net.objecthunter:exp4j:0.4.8'
     // Drivers
     implementation 'com.mysql:mysql-connector-j:9.5.0'
     implementation 'org.mariadb.jdbc:mariadb-java-client:3.5.7'
