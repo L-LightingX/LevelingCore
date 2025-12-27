@@ -17,6 +17,7 @@ public class Main {
     public static Path configPath = Paths.get("./hyleveling");
 
     static void main() {
+        // TODO: Move to server startup so registration are auto handled
         var config = ConfigManager.loadOrCreate(configPath);
         var desc = LevelFormulaFactory.descriptorFromConfig(config);
         var formula = LevelFormulaFactory.fromConfig(config);
@@ -30,13 +31,14 @@ public class Main {
             repository.migrateFormulaIfNeeded(formula, desc);
         }
         var levelService = new LevelServiceImpl(formula, repository);
+
+        // TODO: Remove once hooks into the player/mob kill events are found and integrable.
         var testId = UUID.fromString("d3804858-4bb8-4026-ae21-386255ed467d");
-
-        levelService.addXp(testId, 500);
-
+        levelService.setLevel(testId, 7);
         LOGGER.log(System.Logger.Level.INFO, String.format("XP: %d", levelService.getXp(testId)));
         LOGGER.log(System.Logger.Level.INFO, String.format("Level: %d", levelService.getLevel(testId)));
 
+        // TODO: Move to server shutdown
         Runtime.getRuntime().addShutdownHook(new Thread(repository::close));
     }
 }
