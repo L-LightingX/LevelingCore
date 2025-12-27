@@ -30,6 +30,8 @@ public class HyLevelingConfig {
         public Exponential exponential = new Exponential();
 
         public Linear linear = new Linear();
+
+        public Table table = new Table();
     }
 
     public static class Exponential {
@@ -42,5 +44,10 @@ public class HyLevelingConfig {
     public static class Linear {
 
         public long xpPerLevel = 100;
+    }
+
+    public static class Table {
+
+        public String file = "levels.csv";
     }
 }

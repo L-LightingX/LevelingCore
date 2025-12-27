@@ -45,6 +45,7 @@ public final class ConfigManager {
         # Supported types:
         #   - EXPONENTIAL: XP floor at level L is baseXp * (L - 1) ^ exponent
         #   - LINEAR:      XP floor at level L is xpPerLevel * (L - 1)
+        #   - TABLE
         #
         # Notes:
         # - XP migration is enabled by default. Set migrateXP to false to disable.
@@ -57,6 +58,8 @@ public final class ConfigManager {
             exponent: 1.7
           linear:
             xpPerLevel: 100
+          table:
+            file: "levels.csv"
         """;
 
     private ConfigManager() {}

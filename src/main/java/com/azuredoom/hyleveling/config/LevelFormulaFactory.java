@@ -4,7 +4,10 @@ import com.azuredoom.hyleveling.HyLevelingException;
 import com.azuredoom.hyleveling.level.formulas.ExponentialLevelFormula;
 import com.azuredoom.hyleveling.level.formulas.LevelFormula;
 import com.azuredoom.hyleveling.level.formulas.LinearLevelFormula;
+import com.azuredoom.hyleveling.level.formulas.loader.LevelTableLoader;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -22,7 +25,7 @@ public final class LevelFormulaFactory {
 
     /**
      * Constructs a {@link LevelFormula} object based on the provided configuration. The method determines the type of
-     * formula to use (e.g., "EXPONENTIAL" or "LINEAR") and initializes the appropriate implementation with the
+     * formula to use (e.g., "EXPONENTIAL", "LINEAR", "TABLE") and initializes the appropriate implementation with the
      * parameters specified in the configuration. If the configuration is null or invalid, a default
      * {@link ExponentialLevelFormula} is returned.
      *
@@ -34,7 +37,6 @@ public final class LevelFormulaFactory {
      */
     public static LevelFormula fromConfig(HyLevelingConfig config) {
         if (config == null || config.formula == null || config.formula.type == null) {
-            // Safe default
             return new ExponentialLevelFormula(100, 1.7);
         }
 
@@ -50,6 +52,11 @@ public final class LevelFormulaFactory {
                 long xpPerLevel = config.formula.linear.xpPerLevel;
                 yield new LinearLevelFormula(xpPerLevel);
             }
+            case "TABLE" -> {
+                var dataDir = Paths.get("./data");
+                System.out.println("Data dir = " + dataDir.toAbsolutePath());
+                yield LevelTableLoader.loadOrCreateFromDataDir(dataDir, config.formula.table.file);
+            }
             default -> throw new HyLevelingException(
                 "Unknown formula.type '" + config.formula.type + "'. Expected EXPONENTIAL or LINEAR."
             );
@@ -58,8 +65,8 @@ public final class LevelFormulaFactory {
 
     /**
      * Constructs a {@link FormulaDescriptor} based on the provided {@link HyLevelingConfig}. The type and parameters
-     * for the descriptor are determined by the configuration's formula settings. Supports two formula types:
-     * "EXPONENTIAL" and "LINEAR". Throws an exception if an unsupported formula type is specified.
+     * for the descriptor are determined by the configuration's formula settings. Supports the following formula types:
+     * "EXPONENTIAL", "LINEAR", and "TABLE". Throws an exception if an unsupported formula type is specified.
      *
      * @param cfg the configuration object containing the formula type and its relevant parameter values
      * @return a {@link FormulaDescriptor} instance encapsulating the formula type and its parameters
@@ -76,19 +83,23 @@ public final class LevelFormulaFactory {
                 "LINEAR",
                 "xpPerLevel=" + cfg.formula.linear.xpPerLevel
             );
+            case "TABLE" -> new FormulaDescriptor(
+                "TABLE",
+                "file=" + cfg.formula.table.file
+            );
             default -> throw new HyLevelingException("Unknown formula.type: " + cfg.formula.type);
         };
     }
 
     /**
      * Converts a {@link FormulaDescriptor} into a {@link LevelFormula} based on the descriptor's type and parameters.
-     * The supported formula types are "EXPONENTIAL" and "LINEAR", each with specific parameter requirements.
+     * The supported formula types are "EXPONENTIAL", "LINEAR", and "TABLE", each with specific parameter requirements.
      *
      * @param d the formula descriptor containing the type and parameters for constructing the level formula
      * @return a {@link LevelFormula} instance constructed according to the descriptor
      * @throws HyLevelingException if the descriptor contains an unknown formula type
      */
-    public static LevelFormula formulaFromDescriptor(FormulaDescriptor d) {
+    public static LevelFormula formulaFromDescriptor(FormulaDescriptor d, Path dataDir) {
         var type = d.type().trim().toUpperCase(Locale.ROOT);
 
         Map<String, String> map = new HashMap<>();
@@ -105,9 +116,13 @@ public final class LevelFormulaFactory {
                 Double.parseDouble(map.getOrDefault("baseXp", "100.0")),
                 Double.parseDouble(map.getOrDefault("exponent", "1.7"))
             );
-            case "LINEAR" -> new com.azuredoom.hyleveling.level.formulas.LinearLevelFormula(
+            case "LINEAR" -> new LinearLevelFormula(
                 Long.parseLong(map.getOrDefault("xpPerLevel", "100"))
             );
+            case "TABLE" -> {
+                String file = map.getOrDefault("file", "levels.csv");
+                yield LevelTableLoader.loadOrCreateFromDataDir(dataDir, file);
+            }
             default -> throw new HyLevelingException("Unknown stored formula.type: " + d.type());
         };
     }
