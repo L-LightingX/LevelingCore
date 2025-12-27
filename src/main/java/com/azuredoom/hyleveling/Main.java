@@ -1,7 +1,7 @@
 package com.azuredoom.hyleveling;
 
 import com.azuredoom.hyleveling.database.H2LevelRepository;
-import com.azuredoom.hyleveling.level.ExponentialLevelFormula;
+import com.azuredoom.hyleveling.level.formulas.ExponentialLevelFormula;
 import com.azuredoom.hyleveling.level.LevelServiceImpl;
 
 import java.util.UUID;
