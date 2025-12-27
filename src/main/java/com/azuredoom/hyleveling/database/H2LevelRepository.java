@@ -20,7 +20,7 @@ public class H2LevelRepository implements LevelRepository {
 
     public H2LevelRepository(String databasePath) {
         try {
-            connection = DriverManager.getConnection("jdbc:h2:" + databasePath + ";AUTO_SERVER=TRUE");
+            connection = DriverManager.getConnection("jdbc:h2:file:" + databasePath + ";AUTO_SERVER=TRUE");
             createTableIfNotExists();
         } catch (SQLException e) {
             throw new HyLevelingException("Failed to connect to H2 database", e);
