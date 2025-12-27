@@ -2,6 +2,7 @@ package com.azuredoom.hyleveling.level;
 
 import com.azuredoom.hyleveling.database.LevelRepository;
 import com.azuredoom.hyleveling.events.LevelDownListener;
+import com.azuredoom.hyleveling.events.LevelUpListener;
 import com.azuredoom.hyleveling.events.XpGainListener;
 import com.azuredoom.hyleveling.events.XpLossListener;
 
@@ -21,9 +22,11 @@ public class LevelServiceImpl implements LevelService {
 
     private final Map<UUID, PlayerLevelData> cache = new ConcurrentHashMap<>();
 
-    private final List<LevelListener> levelUpListeners = new ArrayList<>();
+    private final List<LevelListener> levelListeners = new ArrayList<>();
 
     private final List<LevelDownListener> levelDownListeners = new ArrayList<>();
+
+    private final List<LevelUpListener> levelUpListeners = new ArrayList<>();
 
     private final List<XpGainListener> xpGainListeners = new ArrayList<>();
 
@@ -60,6 +63,78 @@ public class LevelServiceImpl implements LevelService {
         return get(id).getXp();
     }
 
+    /**
+     * Retrieves the level of a player based on their current experience points (XP).
+     *
+     * @param id The unique identifier (UUID) of the player whose level is being retrieved.
+     * @return The player's level as an integer, calculated from their XP.
+     */
+    @Override
+    public int getLevel(UUID id) {
+        return formula.getLevelForXp(get(id).getXp());
+    }
+
+    @Override
+    public void addLevel(UUID id, int level) {
+        if (level == 0) {
+            return;
+        }
+
+        var data = get(id);
+        var oldLevel = getLevel(id);
+
+        int targetLevel = oldLevel + level;
+        if (targetLevel < 1) {
+            targetLevel = 1;
+        }
+
+        var targetXp = formula.getXpForLevel(targetLevel);
+        data.setXp(targetXp);
+        repository.save(data);
+
+        var newLevel = getLevel(id);
+
+        if (newLevel > oldLevel) {
+            levelUpListeners.forEach(l -> l.onLevelUp(id, newLevel));
+        } else if (newLevel < oldLevel) {
+            levelDownListeners.forEach(l -> l.onLevelDown(id, newLevel));
+        }
+    }
+
+    @Override
+    public void removeLevel(UUID id, int level) {
+        if (level <= 0) {
+            throw new IllegalArgumentException("level must be greater than 0");
+        }
+
+        var data = get(id);
+        var oldLevel = getLevel(id);
+
+        int targetLevel = oldLevel - level;
+        if (targetLevel < 1) {
+            targetLevel = 1;
+        }
+
+        long targetXp = formula.getXpForLevel(targetLevel);
+        data.setXp(targetXp);
+        repository.save(data);
+
+        int newLevel = getLevel(id);
+        if (newLevel < oldLevel) {
+            levelDownListeners.forEach(l -> l.onLevelDown(id, newLevel));
+        }
+    }
+
+    /**
+     * Sets the level of the player associated with the given unique identifier (UUID). The method ensures
+     * that the specified level is at least the minimum allowed (1). If the level changes, appropriate
+     * listeners for level-up or level-down events are triggered.
+     *
+     * @param playerId The unique identifier (UUID) of the player whose level is being set.
+     * @param level    The target level to set for the player. If the value provided is less than 1,
+     *                 it defaults to 1.
+     * @return The new level of the player after the operation.
+     */
     @Override
     public int setLevel(UUID playerId, int level) {
         var targetLevel = Math.max(level, 1);
@@ -82,16 +157,13 @@ public class LevelServiceImpl implements LevelService {
     }
 
     /**
-     * Retrieves the level of a player based on their current experience points (XP).
+     * Calculates the total experience points (XP) required to reach the specified level.
+     * If the level is less than or equal to 1, the XP required is 0. For higher levels,
+     * the calculation is delegated to the associated {@code LevelFormula}.
      *
-     * @param id The unique identifier (UUID) of the player whose level is being retrieved.
-     * @return The player's level as an integer, calculated from their XP.
+     * @param level The target level for which the required XP is being calculated. Must be a positive integer.
+     * @return The total XP required to reach the specified level. Returns 0 for level 1 or below.
      */
-    @Override
-    public int getLevel(UUID id) {
-        return formula.getLevelForXp(get(id).getXp());
-    }
-
     @Override
     public long getXpForLevel(int level) {
         if (level <= 1) {
@@ -179,7 +251,7 @@ public class LevelServiceImpl implements LevelService {
      */
     @Override
     public void registerListener(LevelListener listener) {
-        levelUpListeners.add(listener);
+        levelListeners.add(listener);
     }
 
     /**
@@ -190,7 +262,7 @@ public class LevelServiceImpl implements LevelService {
      */
     @Override
     public void unregisterListener(LevelListener listener) {
-        levelUpListeners.remove(listener);
+        levelListeners.remove(listener);
     }
 
     /**
@@ -203,6 +275,19 @@ public class LevelServiceImpl implements LevelService {
     @Override
     public void registerLevelDownListener(LevelDownListener listener) {
         levelDownListeners.add(listener);
+    }
+
+    /**
+     * Registers a listener to be notified of events when a player levels up.
+     * When a player's level increases, the registered listener's {@code onLevelUp}
+     * method will be invoked.
+     *
+     * @param listener The {@link LevelUpListener} to be registered for receiving
+     *                 notifications about level-up events.
+     */
+    @Override
+    public void registerLevelUpListener(LevelUpListener listener) {
+        levelUpListeners.add(listener);
     }
 
     /**

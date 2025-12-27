@@ -1,6 +1,7 @@
 package com.azuredoom.hyleveling.level;
 
 import com.azuredoom.hyleveling.events.LevelDownListener;
+import com.azuredoom.hyleveling.events.LevelUpListener;
 import com.azuredoom.hyleveling.events.XpGainListener;
 import com.azuredoom.hyleveling.events.XpLossListener;
 
@@ -11,6 +12,10 @@ import java.util.UUID;
  * provides methods for retrieving and modifying XP, as well as managing listeners for level-related events.
  */
 public interface LevelService {
+
+    void addLevel(UUID playerId, int level);
+
+    void removeLevel(UUID playerId, int level);
 
     int setLevel(UUID playerId, int level);
 
@@ -35,4 +40,6 @@ public interface LevelService {
     void registerXpLossListener(XpLossListener listener);
 
     void registerLevelDownListener(LevelDownListener listener);
+
+    void registerLevelUpListener(LevelUpListener listener);
 }
