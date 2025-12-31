@@ -8,11 +8,12 @@ import java.util.UUID;
 
 public class Main {
 
+    // Make sure this is BEFORE bootstrap to ensure no NPE thrown
+    public static final Path configPath = Paths.get("./data/plugins/levelingcore/");
+
     public static final ConfigBootstrap.Bootstrap bootstrap = ConfigBootstrap.bootstrap();
 
     public static final System.Logger LOGGER = System.getLogger(Main.class.getName());
-
-    public static final Path configPath = Paths.get("./data/plugins/levelingcore/");
 
     static void main() {
         // TODO: Move to server startup so registration are auto handled

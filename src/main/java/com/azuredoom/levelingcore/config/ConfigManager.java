@@ -39,16 +39,12 @@ public final class ConfigManager {
             var configPath = dataDir.resolve("levelingcore.yml");
 
             if (Files.notExists(configPath)) {
-                try (
-                    var in = ConfigManager.class
-                        .getClassLoader()
-                        .getResourceAsStream("default.yml")
-                ) {
-
+                try (var in = ConfigManager.class.getResourceAsStream("/default.yml")) {
                     if (in == null) {
-                        throw new LevelingCoreException("default.yml not found in resources");
+                        throw new LevelingCoreException(
+                            "default.yml not found in resources (expected at /default.yml)"
+                        );
                     }
-
                     Files.copy(in, configPath, StandardCopyOption.REPLACE_EXISTING);
                 }
             }
