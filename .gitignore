@@ -16,3 +16,4 @@ build
 .gradle
 .profileconfig.json
 data
+libs

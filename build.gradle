@@ -6,7 +6,6 @@ plugins {
 }
 
 group = 'com.azuredoom.hyslayer'
-version = '1.0.0'
 
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(java_version)
@@ -17,6 +16,9 @@ repositories {
 }
 
 dependencies {
+    // Hytale server
+    // compileOnly fileTree(dir: "$rootDir/libs", include: ["*.jar"])
+    // Needed libs
     implementation 'com.h2database:h2:2.4.240'
     implementation 'com.zaxxer:HikariCP:7.0.2'
     implementation 'org.slf4j:slf4j-simple:2.0.17'
