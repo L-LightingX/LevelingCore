@@ -12,7 +12,7 @@ public class HyLevelingConfig {
 
     public static class Database {
 
-        public String jdbcUrl = "jdbc:h2:file:./hyleveling/hyleveling;AUTO_SERVER=TRUE;MODE=PostgreSQL";
+        public String jdbcUrl = "jdbc:h2:file:./hyleveling/hyleveling;MODE=PostgreSQL";
 
         public String username = "";
 
