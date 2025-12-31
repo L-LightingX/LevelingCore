@@ -44,11 +44,15 @@ public class LevelingCoreConfig {
         public double baseXp = 100.0;
 
         public double exponent = 1.7;
+
+        public int maxLevel = 100000;
     }
 
     public static class Linear {
 
         public long xpPerLevel = 100;
+
+        public int maxLevel = 100000;
     }
 
     public static class Table {

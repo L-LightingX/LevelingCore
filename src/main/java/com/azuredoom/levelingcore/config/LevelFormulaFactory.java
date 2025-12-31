@@ -41,7 +41,7 @@ public final class LevelFormulaFactory {
      */
     public static LevelFormula fromConfig(LevelingCoreConfig config) {
         if (config == null || config.formula == null || config.formula.type == null) {
-            return new ExponentialLevelFormula(100, 1.7);
+            return new ExponentialLevelFormula(100, 1.7, 100000);
         }
 
         String type = config.formula.type.trim().toUpperCase(Locale.ROOT);
@@ -50,11 +50,13 @@ public final class LevelFormulaFactory {
             case "EXPONENTIAL" -> {
                 double baseXp = config.formula.exponential.baseXp;
                 double exponent = config.formula.exponential.exponent;
-                yield new ExponentialLevelFormula(baseXp, exponent);
+                var maxLevel = config.formula.exponential.maxLevel;
+                yield new ExponentialLevelFormula(baseXp, exponent, maxLevel);
             }
             case "LINEAR" -> {
                 long xpPerLevel = config.formula.linear.xpPerLevel;
-                yield new LinearLevelFormula(xpPerLevel);
+                var maxLevel = config.formula.linear.maxLevel;
+                yield new LinearLevelFormula(xpPerLevel, maxLevel);
             }
             case "TABLE" -> {
                 var dataDir = Main.configPath;
@@ -135,10 +137,12 @@ public final class LevelFormulaFactory {
         return switch (type) {
             case "EXPONENTIAL" -> new ExponentialLevelFormula(
                 Double.parseDouble(map.getOrDefault("baseXp", "100.0")),
-                Double.parseDouble(map.getOrDefault("exponent", "1.7"))
+                Double.parseDouble(map.getOrDefault("exponent", "1.7")),
+                Integer.parseInt(map.getOrDefault("maxLevel", "100000"))
             );
             case "LINEAR" -> new LinearLevelFormula(
-                Long.parseLong(map.getOrDefault("xpPerLevel", "100"))
+                Long.parseLong(map.getOrDefault("xpPerLevel", "100")),
+                Integer.parseInt(map.getOrDefault("maxLevel", "100000"))
             );
             case "TABLE" -> {
                 var file = map.getOrDefault("file", "levels.csv");

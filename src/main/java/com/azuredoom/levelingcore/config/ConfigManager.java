@@ -64,8 +64,12 @@ public final class ConfigManager {
           exponential:
             baseXp: 100.0
             exponent: 1.7
+            # Maximum level supported by this formula
+            maxLevel: 100000
           linear:
             xpPerLevel: 100
+            # Maximum level supported by this formula
+            maxLevel: 100000
           table:
             # CSV file relative to the data directory
             file: "levels.csv"

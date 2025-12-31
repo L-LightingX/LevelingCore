@@ -1,5 +1,7 @@
 package com.azuredoom.levelingcore.level.formulas;
 
+import com.azuredoom.levelingcore.LevelingCoreException;
+
 /**
  * Implementation of the LevelFormula interface that calculates experience points (XP) and level values using a linear
  * formula. In this model, the XP required for each level progression grows at a constant rate defined by the XP per
@@ -9,18 +11,25 @@ public class LinearLevelFormula implements LevelFormula {
 
     private final long xpPerLevel;
 
+    private final int maxLevel;
+
     /**
      * Constructs an instance of the LinearLevelFormula class, which calculates XP and level values using a linear
      * formula. The XP progression grows at a constant rate based on the provided XP per level value.
      *
      * @param xpPerLevel The number of experience points required for each level progression. Must be greater than 0.
+     * @param maxLevel   The maximum level supported by this formula. Must be greater than or equal to 1.
      * @throws IllegalArgumentException If xpPerLevel is less than or equal to 0.
      */
-    public LinearLevelFormula(long xpPerLevel) {
+    public LinearLevelFormula(long xpPerLevel, int maxLevel) {
         if (xpPerLevel <= 0) {
             throw new IllegalArgumentException("xpPerLevel must be > 0");
         }
+        if (maxLevel < 1) {
+            throw new LevelingCoreException("maxLevel must be >= 1");
+        }
         this.xpPerLevel = xpPerLevel;
+        this.maxLevel = maxLevel;
     }
 
     /**
@@ -68,8 +77,8 @@ public class LinearLevelFormula implements LevelFormula {
 
         long level = (xp / xpPerLevel) + 1;
 
-        if (level >= Integer.MAX_VALUE) {
-            return Integer.MAX_VALUE;
+        if (level >= maxLevel) {
+            return maxLevel;
         }
 
         return (int) level;
