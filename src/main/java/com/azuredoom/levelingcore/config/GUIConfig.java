@@ -85,6 +85,30 @@ public class GUIConfig {
             (exConfig, extraInfo) -> exConfig.showXPAmountInHUD
         )
         .add()
+        .append(
+            new KeyedCodec<Boolean>("EnableStatLeveling", Codec.BOOLEAN),
+            (exConfig, aDouble, extraInfo) -> exConfig.enableStatLeveling = aDouble,
+            (exConfig, extraInfo) -> exConfig.enableStatLeveling
+        )
+        .add()
+        .append(
+            new KeyedCodec<Float>("HealthLevelUpMultiplier", Codec.FLOAT),
+            (exConfig, aDouble, extraInfo) -> exConfig.healthLevelUpMultiplier = aDouble,
+            (exConfig, extraInfo) -> exConfig.healthLevelUpMultiplier
+        )
+        .add()
+        .append(
+            new KeyedCodec<Float>("StaminaLevelUpMultiplier", Codec.FLOAT),
+            (exConfig, aDouble, extraInfo) -> exConfig.staminaLevelUpMultiplier = aDouble,
+            (exConfig, extraInfo) -> exConfig.staminaLevelUpMultiplier
+        )
+        .add()
+        .append(
+            new KeyedCodec<Float>("ManaLevelUpMultiplier", Codec.FLOAT),
+            (exConfig, aDouble, extraInfo) -> exConfig.manaLevelUpMultiplier = aDouble,
+            (exConfig, extraInfo) -> exConfig.manaLevelUpMultiplier
+        )
+        .add()
         .build();
 
     private boolean enableXPLossOnDeath = false;
@@ -110,6 +134,14 @@ public class GUIConfig {
     private boolean enableSimplePartyXPShareCompat = true;
 
     private boolean showXPAmountInHUD = false;
+
+    private boolean enableStatLeveling = true;
+
+    private float healthLevelUpMultiplier = 1.2F;
+
+    private float staminaLevelUpMultiplier = 0.35F;
+
+    private float manaLevelUpMultiplier = 0.6F;
 
     public GUIConfig() {}
 
@@ -212,7 +244,48 @@ public class GUIConfig {
         return enableSimplePartyXPShareCompat;
     }
 
+    /**
+     * Determines whether the experience points (XP) amount is displayed in the Heads-Up Display (HUD).
+     *
+     * @return {@code true} if the XP amount should be shown in the HUD, otherwise {@code false}.
+     */
     public boolean isShowXPAmountInHUD() {
         return showXPAmountInHUD;
+    }
+
+    /**
+     * Determines whether the stat leveling system is enabled in the configuration.
+     *
+     * @return {@code true} if stat leveling is enabled, otherwise {@code false}.
+     */
+    public boolean isEnableStatLeveling() {
+        return enableStatLeveling;
+    }
+
+    /**
+     * Retrieves the multiplier value applied to health upon leveling up.
+     *
+     * @return the health level-up multiplier as a float.
+     */
+    public float getHealthLevelUpMultiplier() {
+        return healthLevelUpMultiplier;
+    }
+
+    /**
+     * Retrieves the multiplier value applied to stamina upon leveling up.
+     *
+     * @return the stamina level-up multiplier as a float.
+     */
+    public float getStaminaLevelUpMultiplier() {
+        return staminaLevelUpMultiplier;
+    }
+
+    /**
+     * Retrieves the multiplier value applied to mana upon leveling up.
+     *
+     * @return the mana level-up multiplier as a float.
+     */
+    public float getManaLevelUpMultiplier() {
+        return manaLevelUpMultiplier;
     }
 }

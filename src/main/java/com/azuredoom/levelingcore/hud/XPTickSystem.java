@@ -1,6 +1,5 @@
 package com.azuredoom.levelingcore.hud;
 
-import com.azuredoom.levelingcore.config.GUIConfig;
 import com.buuz135.mhud.MultipleHUD;
 import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.component.ArchetypeChunk;
@@ -23,6 +22,8 @@ import java.util.logging.Level;
 
 import com.azuredoom.levelingcore.LevelingCore;
 import com.azuredoom.levelingcore.api.LevelingCoreApi;
+import com.azuredoom.levelingcore.config.GUIConfig;
+import com.azuredoom.levelingcore.utils.StatsUtils;
 
 public class XPTickSystem extends EntityTickingSystem<EntityStore> {
 
@@ -59,6 +60,38 @@ public class XPTickSystem extends EntityTickingSystem<EntityStore> {
                 LevelingCore.LOGGER.at(Level.WARNING)
                     .log("MultipleHUD not found, XP HUD will not work correctly with other mods adding custom UI");
                 player.getHudManager().setCustomHud(playerRef, xpHud);
+            }
+            if (config.get().isEnableStatLeveling()) {
+                player.getWorld().execute(() -> {
+                    levelService1.registerLevelUpListener(((playerId, newLevel) -> {
+                        StatsUtils.doHealthIncrease(
+                            store,
+                            playerRef,
+                            newLevel * config.get().getHealthLevelUpMultiplier()
+                        );
+                        StatsUtils.doStaminaIncrease(
+                            store,
+                            playerRef,
+                            newLevel * config.get().getStaminaLevelUpMultiplier()
+                        );
+                        StatsUtils.doManaIncrease(store, playerRef, newLevel * config.get().getManaLevelUpMultiplier());
+                    }));
+                    levelService1.registerLevelDownListener(((playerId, newLevel) -> {
+                        StatsUtils.resetStats(store, playerRef);
+
+                        StatsUtils.doHealthIncrease(
+                            store,
+                            playerRef,
+                            newLevel * config.get().getHealthLevelUpMultiplier()
+                        );
+                        StatsUtils.doStaminaIncrease(
+                            store,
+                            playerRef,
+                            newLevel * config.get().getStaminaLevelUpMultiplier()
+                        );
+                        StatsUtils.doManaIncrease(store, playerRef, newLevel * config.get().getManaLevelUpMultiplier());
+                    }));
+                });
             }
         });
     }
