@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.modules.entity.damage.DeathSystems;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.EntityStatType;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.Config;
@@ -65,6 +66,10 @@ public class GainXPEventSystem extends DeathSystems.OnDeathSystem {
             return;
         }
 
+        if (store.getComponent(ref, PlayerRef.getComponentType()) != null) {
+            return;
+        }
+
         if (deathInfo.getSource() instanceof Damage.EntitySource entitySource) {
             var attackerRef = entitySource.getRef();
             if (attackerRef.isValid()) {
@@ -72,8 +77,6 @@ public class GainXPEventSystem extends DeathSystems.OnDeathSystem {
                 if (player == null)
                     return;
                 var playerRef = Universe.get().getPlayer(player.getUuid());
-                if (ref == player.getReference())
-                    return;
                 var statMap = store.getComponent(ref, EntityStatMap.getComponentType());
                 if (statMap == null)
                     return;
