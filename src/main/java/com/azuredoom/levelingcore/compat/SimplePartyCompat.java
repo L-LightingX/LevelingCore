@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.UUID;
 
 import com.azuredoom.levelingcore.config.GUIConfig;
+import com.azuredoom.levelingcore.hud.XPBarHud;
 import com.azuredoom.levelingcore.level.LevelServiceImpl;
 import com.azuredoom.levelingcore.utils.NotificationsUtil;
 
@@ -25,7 +26,6 @@ public class SimplePartyCompat {
      * @param playerUuid   The unique identifier of the player gaining XP.
      * @param levelService The service handling XP and level management.
      * @param config       The configuration object containing settings related to XP sharing and notifications.
-     * @param player       The player instance receiving the XP or notifications.
      */
     public static void onXPGain(
         long xp,
@@ -42,11 +42,13 @@ public class SimplePartyCompat {
                     if (!config.get().isDisableXPGainNotification())
                         NotificationsUtil.sendNotification(Universe.get().getPlayer(uuid), "Gained " + xp + " XP");
                     levelService.addXp(uuid, xp);
+                    XPBarHud.updateHud(playerRef);
                 });
         } else {
             if (!config.get().isDisableXPGainNotification())
                 NotificationsUtil.sendNotification(playerRef, "Gained " + xp + " XP");
             levelService.addXp(playerUuid, xp);
+            XPBarHud.updateHud(playerRef);
         }
     }
 }

@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.azuredoom.levelingcore.api.LevelingCoreApi;
 import com.azuredoom.levelingcore.config.GUIConfig;
+import com.azuredoom.levelingcore.hud.XPBarHud;
 
 public final class LevelUpListenerRegistrar {
 
@@ -24,7 +25,7 @@ public final class LevelUpListenerRegistrar {
         Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     public static void ensureRegistered(
-            Store<EntityStore> store,
+        Store<EntityStore> store,
         Player player,
         PlayerRef playerRef,
         Config<GUIConfig> config
@@ -41,26 +42,29 @@ public final class LevelUpListenerRegistrar {
             if (!config.get().isEnableStatLeveling())
                 return;
 
-            store.getExternalData().getWorld().execute(() -> levelService.registerLevelUpListener((playerId, newLevel) -> {
-                if (!playerId.equals(id))
-                    return;
+            store.getExternalData()
+                .getWorld()
+                .execute(() -> levelService.registerLevelUpListener((playerId, newLevel) -> {
+                    if (!playerId.equals(id))
+                        return;
 
-                StatsUtils.applyAllStats(player, playerRef, newLevel, config);
+                    StatsUtils.applyAllStats(player, playerRef, newLevel, config);
 
-                world.execute(() -> {
-                    var transform = worldStore.getStore()
-                        .getComponent(player.getReference(), EntityModule.get().getTransformComponentType());
-                    SoundUtil.playSoundEvent3dToPlayer(
-                        player.getReference(),
-                        levelupSound,
-                        SoundCategory.UI,
-                        transform.getPosition(),
-                        worldStore.getStore()
-                    );
-                });
-                if (config.get().isEnableLevelUpRewardsConfig())
-                    LevelUpRewardsUtil.giveRewards(newLevel, player);
-            }));
+                    world.execute(() -> {
+                        var transform = worldStore.getStore()
+                            .getComponent(player.getReference(), EntityModule.get().getTransformComponentType());
+                        SoundUtil.playSoundEvent3dToPlayer(
+                            player.getReference(),
+                            levelupSound,
+                            SoundCategory.UI,
+                            transform.getPosition(),
+                            worldStore.getStore()
+                        );
+                    });
+                    if (config.get().isEnableLevelUpRewardsConfig())
+                        LevelUpRewardsUtil.giveRewards(newLevel, player);
+                    XPBarHud.updateHud(playerRef);
+                }));
         });
     }
 

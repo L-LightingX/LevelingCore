@@ -1,6 +1,7 @@
 package com.azuredoom.levelingcore;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.util.Config;
@@ -16,6 +17,7 @@ import com.azuredoom.levelingcore.config.internal.ConfigBootstrap;
 import com.azuredoom.levelingcore.exceptions.LevelingCoreException;
 import com.azuredoom.levelingcore.level.LevelServiceImpl;
 import com.azuredoom.levelingcore.systems.*;
+import com.azuredoom.levelingcore.utils.HudPlayerReady;
 
 public class LevelingCore extends JavaPlugin {
 
@@ -58,6 +60,11 @@ public class LevelingCore extends JavaPlugin {
         levelingService = bootstrap.service();
         this.registerAllCommands();
         this.registerAllSystems();
+        this.getEventRegistry()
+            .registerGlobal(
+                PlayerReadyEvent.class,
+                (playerReadyEvent -> HudPlayerReady.ready(playerReadyEvent, levelingService, config))
+            );
     }
 
     /**
@@ -109,7 +116,6 @@ public class LevelingCore extends JavaPlugin {
     }
 
     public void registerAllSystems() {
-        getEntityStoreRegistry().registerSystem(new XPTickSystem(config));
         getEntityStoreRegistry().registerSystem(new LevelUpTickingSystem(config));
         getEntityStoreRegistry().registerSystem(new LevelDownTickingSystem(config));
         getEntityStoreRegistry().registerSystem(new GainXPEventSystem(config));

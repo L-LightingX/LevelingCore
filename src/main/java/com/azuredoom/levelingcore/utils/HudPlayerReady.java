@@ -1,18 +1,11 @@
-package com.azuredoom.levelingcore.systems;
+package com.azuredoom.levelingcore.utils;
 
 import com.hypixel.hytale.common.plugin.PluginIdentifier;
-import com.hypixel.hytale.component.*;
-import com.hypixel.hytale.component.query.Query;
-import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
-import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.Config;
-import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
-import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 import java.util.logging.Level;
 
@@ -21,32 +14,21 @@ import com.azuredoom.levelingcore.api.LevelingCoreApi;
 import com.azuredoom.levelingcore.compat.MultipleHudCompat;
 import com.azuredoom.levelingcore.config.GUIConfig;
 import com.azuredoom.levelingcore.hud.XPBarHud;
+import com.azuredoom.levelingcore.level.LevelServiceImpl;
 
-public class XPTickSystem extends EntityTickingSystem<EntityStore> {
+public class HudPlayerReady {
 
-    private final Config<GUIConfig> config;
+    public static void ready(PlayerReadyEvent event, LevelServiceImpl levelServiceImpl, Config<GUIConfig> config) {
+        var player = event.getPlayer();
+        var ref = event.getPlayerRef();
+        var store = ref.getStore();
+        var world = store.getExternalData().getWorld();
 
-    public XPTickSystem(Config<GUIConfig> config) {
-        this.config = config;
-    }
-
-    @Override
-    public void tick(
-        float var1,
-        int index,
-        @NonNullDecl ArchetypeChunk<EntityStore> archetypeChunk,
-        @NonNullDecl Store<EntityStore> store,
-        @NonNullDecl CommandBuffer<EntityStore> commandBuffer
-    ) {
-        final Holder<EntityStore> holder = EntityUtils.toHolder(index, archetypeChunk);
-        final Player player = holder.getComponent(Player.getComponentType());
-        final PlayerRef playerRef = holder.getComponent(PlayerRef.getComponentType());
-        if (player == null || playerRef == null) {
-            return;
-        }
-
-        store.getExternalData().getWorld().execute(() -> {
+        world.execute(() -> {
             LevelingCoreApi.getLevelServiceIfPresent().ifPresent(levelService1 -> {
+                var playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+                if (playerRef == null)
+                    return;
                 var xpHud = new XPBarHud(playerRef, levelService1, config);
                 if (PluginManager.get().getPlugin(new PluginIdentifier("Buuz135", "MultipleHUD")) != null) {
                     MultipleHudCompat.showHud(player, playerRef, xpHud);
@@ -62,11 +44,5 @@ public class XPTickSystem extends EntityTickingSystem<EntityStore> {
                 }
             });
         });
-    }
-
-    @NullableDecl
-    @Override
-    public Query<EntityStore> getQuery() {
-        return Query.any();
     }
 }

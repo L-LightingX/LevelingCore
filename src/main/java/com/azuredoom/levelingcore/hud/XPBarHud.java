@@ -7,10 +7,14 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.util.Config;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
+import java.util.WeakHashMap;
+
 import com.azuredoom.levelingcore.config.GUIConfig;
 import com.azuredoom.levelingcore.level.LevelServiceImpl;
 
 public class XPBarHud extends CustomUIHud {
+
+    static private final WeakHashMap<PlayerRef, XPBarHud> hudMap = new WeakHashMap<>();
 
     private LevelServiceImpl levelServiceImpl;
 
@@ -24,6 +28,7 @@ public class XPBarHud extends CustomUIHud {
         super(playerRef);
         this.levelServiceImpl = levelServiceImpl;
         this.config = config;
+        hudMap.put(playerRef, this);
     }
 
     @Override
@@ -55,5 +60,13 @@ public class XPBarHud extends CustomUIHud {
             );
         }
         update(false, uiCommandBuilder); // false = don't clear existing UI
+    }
+
+    public static void updateHud(@NonNullDecl PlayerRef playerRef) {
+        var hud = hudMap.get(playerRef);
+        if (hud == null)
+            return;
+        var uiCommandBuilder = new UICommandBuilder();
+        hud.update(uiCommandBuilder);
     }
 }

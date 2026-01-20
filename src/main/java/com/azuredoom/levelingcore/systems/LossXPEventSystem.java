@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 
 import com.azuredoom.levelingcore.api.LevelingCoreApi;
 import com.azuredoom.levelingcore.config.GUIConfig;
+import com.azuredoom.levelingcore.hud.XPBarHud;
 import com.azuredoom.levelingcore.lang.CommandLang;
 
 /**
@@ -84,6 +85,7 @@ public class LossXPEventSystem extends DeathSystems.OnDeathSystem {
                     levelService.setXp(playerUuid, newXp);
                     player.sendMessage(CommandLang.XP_LOST.param("xp", actualLoss));
                 }
+                XPBarHud.updateHud(player.getPlayerRef());
             });
         });
     }

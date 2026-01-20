@@ -24,6 +24,7 @@ import com.azuredoom.levelingcore.LevelingCore;
 import com.azuredoom.levelingcore.api.LevelingCoreApi;
 import com.azuredoom.levelingcore.compat.SimplePartyCompat;
 import com.azuredoom.levelingcore.config.GUIConfig;
+import com.azuredoom.levelingcore.hud.XPBarHud;
 import com.azuredoom.levelingcore.lang.CommandLang;
 import com.azuredoom.levelingcore.level.xp.XPValues;
 import com.azuredoom.levelingcore.utils.NotificationsUtil;
@@ -118,6 +119,7 @@ public class GainXPEventSystem extends DeathSystems.OnDeathSystem {
                             if (!config.get().isDisableXPGainNotification())
                                 NotificationsUtil.sendNotification(playerRef, "Gained " + xpAmount + " XP");
                             levelService.addXp(player.getUuid(), xpAmount);
+                            XPBarHud.updateHud(playerRef);
                         }
                         var levelAfter = levelService.getLevel(player.getUuid());
                         if (levelAfter > levelBefore) {
