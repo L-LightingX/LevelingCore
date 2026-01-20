@@ -18,7 +18,9 @@ import com.azuredoom.levelingcore.level.LevelServiceImpl;
 
 public class HudPlayerReady {
 
-    public static void ready(PlayerReadyEvent event, LevelServiceImpl levelServiceImpl, Config<GUIConfig> config) {
+    private HudPlayerReady() {}
+
+    public static void ready(PlayerReadyEvent event, Config<GUIConfig> config) {
         var player = event.getPlayer();
         var ref = event.getPlayerRef();
         var store = ref.getStore();

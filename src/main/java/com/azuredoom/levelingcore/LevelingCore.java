@@ -63,7 +63,7 @@ public class LevelingCore extends JavaPlugin {
         this.getEventRegistry()
             .registerGlobal(
                 PlayerReadyEvent.class,
-                (playerReadyEvent -> HudPlayerReady.ready(playerReadyEvent, levelingService, config))
+                (playerReadyEvent -> HudPlayerReady.ready(playerReadyEvent, config))
             );
     }
 
