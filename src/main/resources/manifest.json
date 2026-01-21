@@ -12,6 +12,7 @@
     "ServerVersion": "*",
     "Dependencies": {
         "Hytale:EntityModule": "*",
+        "Hytale:InteractionModule": "*",
         "Buuz135:MultipleHUD": "*"
     },
     "OptionalDependencies": {
