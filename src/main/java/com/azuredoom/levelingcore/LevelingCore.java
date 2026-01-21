@@ -85,6 +85,7 @@ public class LevelingCore extends JavaPlugin {
         levelingService = bootstrap.service();
         this.registerAllCommands();
         this.registerAllSystems();
+        // Adds the UI to the player and ensures AP stats are applied
         this.getEventRegistry()
             .registerGlobal(
                 PlayerReadyEvent.class,
@@ -92,12 +93,21 @@ public class LevelingCore extends JavaPlugin {
                     var player = playerReadyEvent.getPlayer();
                     if (player != null) {
                         LevelingCoreApi.getLevelServiceIfPresent().ifPresent(levelService -> {
-                            if (
-                                levelService.getLevel(player.getUuid()) == 1 && levelService.getAvailableAbilityPoints(
-                                    player.getUuid()
-                                ) == 0
-                            ) {
-                                levelService.setAbilityPoints(player.getUuid(), 5);
+                            var uuid = player.getUuid();
+                            var level = levelService.getLevel(uuid);
+                            int expectedTotal;
+                            if (config.get().isUseStatsPerLevelMapping()) {
+                                var mapping = LevelingCore.apMap;
+                                expectedTotal = mapping.getOrDefault(level, 5);
+                            } else {
+                                expectedTotal = config.get().getStatsPerLevel();
+                            }
+                            var used = levelService.getUsedAbilityPoints(uuid);
+                            var currentTotal = levelService.getAvailableAbilityPoints(uuid) + used;
+                            var targetTotal = Math.max(0, level * expectedTotal);
+
+                            if (currentTotal != targetTotal) {
+                                levelService.setAbilityPoints(uuid, targetTotal);
                             }
                         });
                     }
