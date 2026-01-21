@@ -12,6 +12,7 @@ import java.nio.file.Paths;
 import java.util.logging.*;
 import javax.annotation.Nonnull;
 
+import com.azuredoom.levelingcore.api.LevelingCoreApi;
 import com.azuredoom.levelingcore.commands.*;
 import com.azuredoom.levelingcore.config.GUIConfig;
 import com.azuredoom.levelingcore.config.internal.ConfigBootstrap;
@@ -20,6 +21,8 @@ import com.azuredoom.levelingcore.hud.XPBarHud;
 import com.azuredoom.levelingcore.level.LevelServiceImpl;
 import com.azuredoom.levelingcore.systems.*;
 import com.azuredoom.levelingcore.utils.HudPlayerReady;
+import com.azuredoom.levelingcore.utils.LevelDownListenerRegistrar;
+import com.azuredoom.levelingcore.utils.LevelUpListenerRegistrar;
 
 public class LevelingCore extends JavaPlugin {
 
@@ -65,11 +68,29 @@ public class LevelingCore extends JavaPlugin {
         this.getEventRegistry()
             .registerGlobal(
                 PlayerReadyEvent.class,
-                (playerReadyEvent -> HudPlayerReady.ready(playerReadyEvent, config))
+                (playerReadyEvent -> {
+                    var player = playerReadyEvent.getPlayer();
+                    if (player != null) {
+                        LevelingCoreApi.getLevelServiceIfPresent().ifPresent(levelService -> {
+                            if (
+                                levelService.getLevel(player.getUuid()) == 1 && levelService.getAvailableAbilityPoints(
+                                    player.getUuid()
+                                ) == 0
+                            ) {
+                                levelService.setAbilityPoints(player.getUuid(), 5);
+                            }
+                        });
+                    }
+                    HudPlayerReady.ready(playerReadyEvent, config);
+                })
             );
         // Cleans up hudMap map
         this.getEventRegistry()
-            .registerGlobal(PlayerDisconnectEvent.class, (event) -> XPBarHud.removeHud(event.getPlayerRef()));
+            .registerGlobal(PlayerDisconnectEvent.class, (event) -> {
+                XPBarHud.removeHud(event.getPlayerRef());
+                LevelUpListenerRegistrar.clear(event.getPlayerRef().getUuid());
+                LevelDownListenerRegistrar.clear(event.getPlayerRef().getUuid());
+            });
     }
 
     /**
@@ -118,9 +139,11 @@ public class LevelingCore extends JavaPlugin {
         getCommandRegistry().registerCommand(new SetLevelCommand(config));
         getCommandRegistry().registerCommand(new RemoveLevelCommand(config));
         getCommandRegistry().registerCommand(new RemoveXpCommand(config));
+        getCommandRegistry().registerCommand(new ShowStatsCommand(config));
     }
 
     public void registerAllSystems() {
+        getEntityStoreRegistry().registerSystem(new UITickSystem(config));
         getEntityStoreRegistry().registerSystem(new LevelUpTickingSystem(config));
         getEntityStoreRegistry().registerSystem(new LevelDownTickingSystem(config));
         getEntityStoreRegistry().registerSystem(new GainXPEventSystem(config));
