@@ -1,3 +1,20 @@
+v0.6.0
+- Fixes log for xp mapping skipping empty lines.
+- Fix map not being cleaned when player disconnects
+- Added stat points gained on level up. (Config option to disable this if you don't like it)
+- Added a config option to disable stat point gain on level up. (Default: false)
+- Add a tick check to refresh the xp bar on changes (xp gain, xp loss, level up, and level down)
+- Fixed permissions not being correctly named
+  - levelingcore.addlevel
+  - levelingcore.removelevel
+  - levelingcore.setlevel
+  - levelingcore.addxp
+  - levelingcore.removexp
+  - levelingcore.showstats
+- Removed checklevel command as no longer needed.
+- Fixed commands descriptions.
+- Add itemlevelmapping.csv to generate for mapping items to level requirements. (Currently not implemented of this version)
+
 v0.5.1
 - Added a config option to disable XP Gain Notifications. (Default: false)
 - More Thread safety fixes.
