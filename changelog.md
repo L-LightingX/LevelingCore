@@ -1,3 +1,7 @@
+v0.7.1
+- Fixed log spamming on servers that update.
+- Applies AP stats on server join if missing points.
+
 v0.7.0
 - Fixed a bug where the xp bar would not update on the HUD.
 - Fixed a bug where killing mobs would cause more and more lag.
