@@ -1,3 +1,13 @@
+v0.7.0
+- Fixed a bug where the xp bar would not update on the HUD.
+- Fixed a bug where killing mobs would cause more and more lag.
+- Fully implemented the new item level requirement system for attacking weapons.
+- STR now increases damage with melee attacks. (Configable multiplier, default: 0.1)
+- PER now increases damage with ranged attacks. (Configable multiplier, default: 0.1)
+- VIT now increases max health with a configuable multiplier.
+- AGI now increases max stamina with a configuable multiplier.
+- INT now increases max mana with a configuable multiplier.
+
 v0.6.1
 - Tweak to MHud usage with XP Bar Hud UI to hopefully fix some issues with other HUD mods.
 - Fixed showstats command not working.
