@@ -4,15 +4,12 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
+import com.azuredoom.levelingcore.LevelingCore;
 import com.azuredoom.levelingcore.database.DataSourceFactory;
 import com.azuredoom.levelingcore.database.JdbcLevelRepository;
 import com.azuredoom.levelingcore.exceptions.LevelingCoreException;
 import com.azuredoom.levelingcore.level.LevelServiceImpl;
-import com.azuredoom.levelingcore.level.itemlevellock.ItemToLevelMapping;
-import com.azuredoom.levelingcore.level.rewards.LevelRewards;
 import com.azuredoom.levelingcore.level.rewards.RewardEntry;
-import com.azuredoom.levelingcore.level.stats.StatsPerLevelMapping;
-import com.azuredoom.levelingcore.level.xp.XPValues;
 
 /**
  * ConfigBootstrap is a utility class that initializes and configures the core components of the LevelingCore system.
@@ -66,10 +63,10 @@ public final class ConfigBootstrap {
             repo.migrateFormulaIfNeeded(formula, formulaDescriptor);
         }
         var service = new LevelServiceImpl(formula, repo);
-        var xpMapping = XPValues.loadOrCreate(dataDir);
-        var levelRewardMapping = LevelRewards.loadOrCreate(dataDir);
-        var itemLevelMapping = ItemToLevelMapping.loadOrCreate(dataDir);
-        var statsPerLevelMapping = StatsPerLevelMapping.loadOrCreate(dataDir);
+        var xpMapping = LevelingCore.xpMapping;
+        var levelRewardMapping = LevelingCore.levelRewardMapping;
+        var itemLevelMapping = LevelingCore.itemLevelMapping;
+        var statsPerLevelMapping = LevelingCore.apMap;
 
         return new Bootstrap(
             service,

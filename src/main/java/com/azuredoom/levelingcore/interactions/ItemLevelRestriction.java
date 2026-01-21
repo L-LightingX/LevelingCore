@@ -22,7 +22,6 @@ import javax.annotation.Nullable;
 import com.azuredoom.levelingcore.LevelingCore;
 import com.azuredoom.levelingcore.api.LevelingCoreApi;
 import com.azuredoom.levelingcore.config.GUIConfig;
-import com.azuredoom.levelingcore.level.itemlevellock.ItemToLevelMapping;
 
 public class ItemLevelRestriction extends DamageEventSystem {
 
@@ -44,7 +43,7 @@ public class ItemLevelRestriction extends DamageEventSystem {
         var player = store.getComponent(ref, Player.getComponentType());
         var playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         var itemHand = player.getInventory().getItemInHand();
-        var map = ItemToLevelMapping.loadOrCreate(LevelingCore.configPath);
+        var map = LevelingCore.itemLevelMapping;
 
         commandBuffer.run(storeRef -> {
             if (playerRef != null && damage.getSource() instanceof Damage.EntitySource entitySource) {

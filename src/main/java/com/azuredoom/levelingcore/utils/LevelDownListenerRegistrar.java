@@ -19,7 +19,6 @@ import com.azuredoom.levelingcore.LevelingCore;
 import com.azuredoom.levelingcore.api.LevelingCoreApi;
 import com.azuredoom.levelingcore.config.GUIConfig;
 import com.azuredoom.levelingcore.lang.CommandLang;
-import com.azuredoom.levelingcore.level.stats.StatsPerLevelMapping;
 
 public class LevelDownListenerRegistrar {
 
@@ -61,7 +60,7 @@ public class LevelDownListenerRegistrar {
                         if (!config.get().isDisableStatPointGainOnLevelUp()) {
                             int pointsPerLevel;
                             if (config.get().isUseStatsPerLevelMapping()) {
-                                var mapping = StatsPerLevelMapping.loadOrCreate(LevelingCore.configPath);
+                                var mapping = LevelingCore.apMap;
                                 pointsPerLevel = mapping.getOrDefault(newLevel, 5);
                             } else {
                                 pointsPerLevel = config.get().getStatsPerLevel();

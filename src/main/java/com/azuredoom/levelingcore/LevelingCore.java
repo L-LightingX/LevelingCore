@@ -9,6 +9,8 @@ import com.hypixel.hytale.server.core.util.Config;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.*;
 import javax.annotation.Nonnull;
 
@@ -18,6 +20,11 @@ import com.azuredoom.levelingcore.config.GUIConfig;
 import com.azuredoom.levelingcore.config.internal.ConfigBootstrap;
 import com.azuredoom.levelingcore.exceptions.LevelingCoreException;
 import com.azuredoom.levelingcore.level.LevelServiceImpl;
+import com.azuredoom.levelingcore.level.itemlevellock.ItemToLevelMapping;
+import com.azuredoom.levelingcore.level.rewards.LevelRewards;
+import com.azuredoom.levelingcore.level.rewards.RewardEntry;
+import com.azuredoom.levelingcore.level.stats.StatsPerLevelMapping;
+import com.azuredoom.levelingcore.level.xp.XPValues;
 import com.azuredoom.levelingcore.systems.*;
 import com.azuredoom.levelingcore.ui.hud.XPBarHud;
 import com.azuredoom.levelingcore.utils.HudPlayerReady;
@@ -38,6 +45,18 @@ public class LevelingCore extends JavaPlugin {
     private static LevelingCore INSTANCE;
 
     private final Config<GUIConfig> config;
+
+    public static final Map<String, Integer> xpMapping = XPValues.loadOrCreate(LevelingCore.configPath);
+
+    public static final Map<Integer, List<RewardEntry>> levelRewardMapping = LevelRewards.loadOrCreate(
+        LevelingCore.configPath
+    );
+
+    public static final Map<String, Integer> itemLevelMapping = ItemToLevelMapping.loadOrCreate(
+        LevelingCore.configPath
+    );
+
+    public static final Map<Integer, Integer> apMap = StatsPerLevelMapping.loadOrCreate(LevelingCore.configPath);
 
     /**
      * Constructs a new {@code LevelingCore} instance and initializes the core components of the leveling system. This
@@ -85,7 +104,7 @@ public class LevelingCore extends JavaPlugin {
                     HudPlayerReady.ready(playerReadyEvent, config);
                 })
             );
-        // Cleans up hudMap map
+        // Cleans up various weak hash maps and UI on player disconnect
         this.getEventRegistry()
             .registerGlobal(PlayerDisconnectEvent.class, (event) -> {
                 XPBarHud.removeHud(event.getPlayerRef());

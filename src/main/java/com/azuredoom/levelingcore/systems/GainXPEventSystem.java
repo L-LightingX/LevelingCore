@@ -25,7 +25,6 @@ import com.azuredoom.levelingcore.api.LevelingCoreApi;
 import com.azuredoom.levelingcore.compat.SimplePartyCompat;
 import com.azuredoom.levelingcore.config.GUIConfig;
 import com.azuredoom.levelingcore.lang.CommandLang;
-import com.azuredoom.levelingcore.level.xp.XPValues;
 import com.azuredoom.levelingcore.ui.hud.XPBarHud;
 import com.azuredoom.levelingcore.utils.NotificationsUtil;
 
@@ -87,7 +86,7 @@ public class GainXPEventSystem extends DeathSystems.OnDeathSystem {
                 var entity = store.getComponent(ref, NPCEntity.getComponentType());
                 if (entity == null)
                     return;
-                var xpMap = XPValues.loadOrCreate(LevelingCore.configPath);
+                var xpMap = LevelingCore.xpMapping;
                 var healthIndex = EntityStatType.getAssetMap().getIndex("Health");
                 var healthStat = statMap.get(healthIndex);
                 if (healthStat == null)

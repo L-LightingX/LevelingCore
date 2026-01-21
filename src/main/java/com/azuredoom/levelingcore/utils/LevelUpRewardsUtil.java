@@ -7,7 +7,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.azuredoom.levelingcore.LevelingCore;
-import com.azuredoom.levelingcore.level.rewards.LevelRewards;
 
 public final class LevelUpRewardsUtil {
 
@@ -19,7 +18,7 @@ public final class LevelUpRewardsUtil {
         if (newLevel <= last)
             return;
 
-        var rewardsByLevel = LevelRewards.loadOrCreate(LevelingCore.configPath);
+        var rewardsByLevel = LevelingCore.levelRewardMapping;
 
         var inv = player.getInventory().getCombinedStorageFirst();
 

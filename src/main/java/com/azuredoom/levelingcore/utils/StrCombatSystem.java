@@ -22,7 +22,6 @@ import javax.annotation.Nonnull;
 import com.azuredoom.levelingcore.LevelingCore;
 import com.azuredoom.levelingcore.api.LevelingCoreApi;
 import com.azuredoom.levelingcore.config.GUIConfig;
-import com.azuredoom.levelingcore.level.itemlevellock.ItemToLevelMapping;
 
 public class StrCombatSystem extends EntityEventSystem<EntityStore, Damage> {
 
@@ -53,7 +52,7 @@ public class StrCombatSystem extends EntityEventSystem<EntityStore, Damage> {
             return;
         var levelService = levelServiceOpt.get();
 
-        var map = ItemToLevelMapping.loadOrCreate(LevelingCore.configPath);
+        var map = LevelingCore.itemLevelMapping;
 
         if (!(damage.getSource() instanceof Damage.EntitySource entitySource))
             return;
