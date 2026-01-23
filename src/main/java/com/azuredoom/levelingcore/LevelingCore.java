@@ -172,7 +172,6 @@ public class LevelingCore extends JavaPlugin {
     }
 
     public void registerAllSystems() {
-        getEntityStoreRegistry().registerSystem(new UITickSystem(config));
         getEntityStoreRegistry().registerSystem(new LevelUpTickingSystem(config));
         getEntityStoreRegistry().registerSystem(new LevelDownTickingSystem(config));
         getEntityStoreRegistry().registerSystem(new GainXPEventSystem(config));
