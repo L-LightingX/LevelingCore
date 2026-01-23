@@ -164,10 +164,12 @@ if (keyPropsFile.exists()) {
             )
         }
     }
+    // TODO: Move to hytale.curseforge.com when actually working because CurseForge didn't bother getting this ready dispute early access to Hytale.
     tasks.register("publishToCurseForge", Exec) {
         group = "publishing"
-        description = "Publishes the built jar and changelog to Modtale.net."
+        description = "Publishes the built jar and changelog to CurseForge."
         dependsOn tasks.named("build")
+
         def curlExe = org.gradle.internal.os.OperatingSystem.current().isWindows()
                 ? "C:/Windows/System32/curl.exe"
                 : "curl"
@@ -177,21 +179,50 @@ if (keyPropsFile.exists()) {
             releaseProp.load(new FileInputStream(keyPropsFile))
             def apiKey = releaseProp.getProperty("curseKey")
             def projectId = releaseProp.getProperty("curseProjectId")
+
             def jarFile = layout.buildDirectory
                     .file("libs/${project.name}-${project.version}.jar")
                     .get().asFile
-            def changelogFile = rootProject.file("changelog.md")
-            def changelogText = changelogFile.text
+
+            def changelogText = rootProject.file("changelog.md").text
+            def cfReleaseType = project.release_type.toString().toLowerCase()
+
+            def requiredDeps = [
+                    "multiplehud"
+            ]
+
+            def optionalDeps = [
+                    "simpleparty",
+                    "better-modlist"
+            ]
+
+            def dependencies = []
+
+            requiredDeps.each {
+                dependencies << [ slug: it, type: "requiredDependency" ]
+            }
+            optionalDeps.each {
+                dependencies << [ slug: it, type: "optionalDependency" ]
+            }
+
+            def metadataObj = [
+                    changelog     : changelogText,
+                    changelogType : "markdown",
+                    displayName   : "${project.name} ${project.version}",
+                    gameVersions  : [14284],
+                    releaseType   : cfReleaseType,
+                    relations     : [ projects: dependencies ]
+            ]
+            def metadataJson = groovy.json.JsonOutput.toJson(metadataObj)
 
             commandLine(
-                    curlExe, '-X', 'POST',
-                    "https://api.modtale.net/api/v1/projects/$projectId/versions",
-                    '-H', "X-MODTALE-KEY: ${apiKey}",
-                    '-F', "file=@${jarFile.absolutePath}",
-                    '-F', "versionNumber=${project.version}",
-                    '-F', "channel=${project.release_type}",
-                    '-F', "gameVersions=${project.hytale_version}",
-                    '-F', "changelog=${changelogText}"
+                    curlExe,
+                    "-f", "-sS",
+                    "-X", "POST",
+                    "https://legacy.curseforge.com/api/projects/${projectId}/upload-file",
+                    "-H", "X-Api-Token: ${apiKey}",
+                    "-F", "metadata=${metadataJson};type=application/json",
+                    "-F", "file=@${jarFile.absolutePath}"
             )
         }
     }
