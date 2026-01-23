@@ -1,3 +1,12 @@
+v0.7.2
+- Removed UITickSystem, no longer needed and should resolve some lag on level up/downs.
+- Adjusted default xp config values for bears.
+- Fixed loading config logger not properly giving location.
+- Added optional compatibility with the PartyPro plugin.
+- Added optional compatibility with the Party Plugin.
+
+***Note: Next step will be mob leveling, open to suggestions on how to implement this.***
+
 v0.7.1
 - Fixed log spamming on servers that update.
 - Applies AP stats on server join if missing points.
