@@ -193,6 +193,12 @@ public class GUIConfig {
             (exConfig, extraInfo) -> exConfig.intStatMultiplier
         )
         .add()
+        .append(
+            new KeyedCodec<Boolean>("EnablePartyProXPShareCompat", Codec.BOOLEAN),
+            (exConfig, aDouble, extraInfo) -> exConfig.enablePartyProXPShareCompat = aDouble,
+            (exConfig, extraInfo) -> exConfig.enablePartyProXPShareCompat
+        )
+        .add()
         .build();
 
     private boolean enableXPLossOnDeath = false;
@@ -218,6 +224,8 @@ public class GUIConfig {
     private boolean enableLevelAndXPTitles = true;
 
     private boolean enableSimplePartyXPShareCompat = true;
+
+    private boolean enablePartyProXPShareCompat = true;
 
     private boolean showXPAmountInHUD = false;
 
@@ -358,6 +366,10 @@ public class GUIConfig {
      */
     public boolean isEnableSimplePartyXPShareCompat() {
         return enableSimplePartyXPShareCompat;
+    }
+
+    public boolean isEnablePartyProXPShareCompat() {
+        return enablePartyProXPShareCompat;
     }
 
     /**

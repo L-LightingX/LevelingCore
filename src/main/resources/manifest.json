@@ -17,7 +17,8 @@
         "Buuz135:MultipleHUD": "*"
     },
     "OptionalDependencies": {
-        "net.justmadlime:SimpleParty": "*"
+        "net.justmadlime:SimpleParty": "*",
+        "tsumori:partypro": "*"
     },
     "DisabledByDefault": false,
     "Main": "com.azuredoom.levelingcore.LevelingCore",
