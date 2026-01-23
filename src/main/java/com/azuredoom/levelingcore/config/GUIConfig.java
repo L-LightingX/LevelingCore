@@ -205,6 +205,30 @@ public class GUIConfig {
             (exConfig, extraInfo) -> exConfig.enablePartyPluginXPShareCompat
         )
         .add()
+        .append(
+            new KeyedCodec<String>("LevelMode", Codec.STRING),
+            (exConfig, aDouble, extraInfo) -> exConfig.levelMode = aDouble,
+            (exConfig, extraInfo) -> exConfig.levelMode
+        )
+        .add()
+        .append(
+            new KeyedCodec<Float>("MobHealthMultiplier", Codec.FLOAT),
+            (exConfig, aDouble, extraInfo) -> exConfig.mobHealthMultiplier = aDouble,
+            (exConfig, extraInfo) -> exConfig.mobHealthMultiplier
+        )
+        .add()
+        .append(
+            new KeyedCodec<Float>("MobDamageMultiplier", Codec.FLOAT),
+            (exConfig, aDouble, extraInfo) -> exConfig.mobDamageMultiplier = aDouble,
+            (exConfig, extraInfo) -> exConfig.mobDamageMultiplier
+        )
+        .add()
+        .append(
+            new KeyedCodec<Float>("MobRangeDamageMultiplier", Codec.FLOAT),
+            (exConfig, aDouble, extraInfo) -> exConfig.mobRangeDamageMultiplier = aDouble,
+            (exConfig, extraInfo) -> exConfig.mobRangeDamageMultiplier
+        )
+        .add()
         .build();
 
     private boolean enableXPLossOnDeath = false;
@@ -270,6 +294,14 @@ public class GUIConfig {
     private float agiStatMultiplier = 0.25F;
 
     private float intStatMultiplier = 2.0F;
+
+    private String levelMode = "NEARBY_PLAYERS_MEAN";
+
+    private float mobHealthMultiplier = 2.10F;
+
+    private float mobDamageMultiplier = 0.5F;
+
+    private float mobRangeDamageMultiplier = 0.3F;
 
     public GUIConfig() {}
 
@@ -484,5 +516,21 @@ public class GUIConfig {
 
     public float getIntStatMultiplier() {
         return intStatMultiplier;
+    }
+
+    public String getLevelMode() {
+        return levelMode;
+    }
+
+    public float getMobHealthMultiplier() {
+        return mobHealthMultiplier;
+    }
+
+    public float getMobDamageMultiplier() {
+        return mobDamageMultiplier;
+    }
+
+    public float getMobRangeDamageMultiplier() {
+        return mobRangeDamageMultiplier;
     }
 }

@@ -20,6 +20,7 @@ import com.azuredoom.levelingcore.api.LevelingCoreApi;
 import com.azuredoom.levelingcore.config.GUIConfig;
 import com.azuredoom.levelingcore.lang.CommandLang;
 
+@SuppressWarnings("removal")
 public class LevelDownListenerRegistrar {
 
     private static final Set<UUID> REGISTERED =
@@ -42,8 +43,9 @@ public class LevelDownListenerRegistrar {
         LevelingCoreApi.getLevelServiceIfPresent().ifPresent(levelService1 -> {
             LevelUpRewardsUtil.clear(player.getUuid());
             if (config.get().isEnableStatLeveling()) {
-                store.getExternalData().getWorld().execute(() -> {
-                    levelService1.registerLevelDownListener(((playerId, oldLevel, newLevel) -> {
+                store.getExternalData()
+                    .getWorld()
+                    .execute(() -> levelService1.registerLevelDownListener(((playerId, oldLevel, newLevel) -> {
                         StatsUtils.resetStats(store, player);
                         StatsUtils.applyAllStats(store, player, newLevel, config);
                         world.execute(() -> {
@@ -85,8 +87,7 @@ public class LevelDownListenerRegistrar {
 
                         // Need to clear out mapping whenever a player levels down as well
                         LevelUpListenerRegistrar.clear(player.getUuid());
-                    }));
-                });
+                    })));
             }
         });
     }

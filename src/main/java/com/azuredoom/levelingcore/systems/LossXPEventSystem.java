@@ -22,6 +22,7 @@ import com.azuredoom.levelingcore.ui.hud.XPBarHud;
  * points (XP) and level loss events when an entity with a {@link DeathComponent} dies. The system logic for XP or level
  * reduction is determined based on the {@link GUIConfig} provided during initialization.
  */
+@SuppressWarnings("removal")
 public class LossXPEventSystem extends DeathSystems.OnDeathSystem {
 
     private final Config<GUIConfig> config;
@@ -54,8 +55,9 @@ public class LossXPEventSystem extends DeathSystems.OnDeathSystem {
         if (player == null)
             return;
 
-        store.getExternalData().getWorld().execute(() -> {
-            LevelingCoreApi.getLevelServiceIfPresent().ifPresent(levelService -> {
+        store.getExternalData()
+            .getWorld()
+            .execute(() -> LevelingCoreApi.getLevelServiceIfPresent().ifPresent(levelService -> {
                 var playerUuid = player.getUuid();
                 var currentXp = levelService.getXp(playerUuid);
                 var currentLevel = levelService.getLevel(playerUuid);
@@ -86,7 +88,6 @@ public class LossXPEventSystem extends DeathSystems.OnDeathSystem {
                     player.sendMessage(CommandLang.XP_LOST.param("xp", actualLoss));
                 }
                 XPBarHud.updateHud(player.getPlayerRef());
-            });
-        });
+            }));
     }
 }

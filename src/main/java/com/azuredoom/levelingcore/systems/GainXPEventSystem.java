@@ -27,6 +27,7 @@ import com.azuredoom.levelingcore.compat.PartyProCompat;
 import com.azuredoom.levelingcore.compat.SimplePartyCompat;
 import com.azuredoom.levelingcore.config.GUIConfig;
 import com.azuredoom.levelingcore.lang.CommandLang;
+import com.azuredoom.levelingcore.level.mobs.PersistedMobLevel;
 import com.azuredoom.levelingcore.ui.hud.XPBarHud;
 import com.azuredoom.levelingcore.utils.NotificationsUtil;
 
@@ -43,6 +44,7 @@ import com.azuredoom.levelingcore.utils.NotificationsUtil;
  * </ul>
  * The class extends {@code DeathSystems.OnDeathSystem} to seamlessly integrate with death-related events in the game.
  */
+@SuppressWarnings("removal")
 public class GainXPEventSystem extends DeathSystems.OnDeathSystem {
 
     private final Config<GUIConfig> config;
@@ -94,11 +96,27 @@ public class GainXPEventSystem extends DeathSystems.OnDeathSystem {
                 if (healthStat == null)
                     return;
                 var maxHealth = healthStat.getMax();
+                var playerLevel = LevelingCoreApi.getLevelServiceIfPresent()
+                    .map(levelService -> levelService.getLevel(player.getUuid()))
+                    .orElse(0);
+                var mobLevel = LevelingCore.mobLevelPersistence.get(entity.getUuid())
+                    .map(PersistedMobLevel::spawnLevel)
+                    .orElse(1);
                 var xpAmountHealth = Math.max(1, (long) (maxHealth * this.config.get().getDefaultXPGainPercentage()));
                 var getXPMapping = xpMap.getOrDefault(entity.getNPCTypeId(), Math.toIntExact(xpAmountHealth));
                 var xpAmount = config.get().isUseConfigXPMappingsInsteadOfHealthDefaults()
                     ? getXPMapping
                     : xpAmountHealth;
+                final var levelWindow = 5;
+                final var maxBonusMult = 1.25;
+
+                int diff = Math.abs(playerLevel - mobLevel);
+                if (diff <= levelWindow) {
+                    var t = 1.0 - (diff / (double) levelWindow);
+                    var mult = 1.0 + (maxBonusMult - 1.0) * t;
+                    xpAmount = Math.max(1L, Math.round(xpAmount * mult));
+                }
+                long finalXpAmount = xpAmount;
                 store.getExternalData().getWorld().execute(() -> {
                     LevelingCoreApi.getLevelServiceIfPresent().ifPresent(levelService -> {
                         var levelBefore = levelService.getLevel(player.getUuid());
@@ -108,7 +126,7 @@ public class GainXPEventSystem extends DeathSystems.OnDeathSystem {
                                 .getPlugin(new PluginIdentifier("net.justmadlime", "SimpleParty")) != null
                         ) {
                             SimplePartyCompat.onXPGain(
-                                xpAmount,
+                                finalXpAmount,
                                 player.getUuid(),
                                 levelService,
                                 config,
@@ -118,19 +136,27 @@ public class GainXPEventSystem extends DeathSystems.OnDeathSystem {
                             PluginManager.get()
                                 .getPlugin(new PluginIdentifier("tsumori", "partypro")) != null
                         ) {
-                            PartyProCompat.onXPGain(xpAmount, player.getUuid(), levelService, config, playerRef);
+                            PartyProCompat.onXPGain(finalXpAmount, player.getUuid(), levelService, config, playerRef);
                         } else if (
                             PluginManager.get()
                                 .getPlugin(new PluginIdentifier("com.carsonk", "Party Plugin")) != null
                         ) {
-                            PartyPluginCompat.onXPGain(xpAmount, player.getUuid(), levelService, config, playerRef);
+                            PartyPluginCompat.onXPGain(
+                                finalXpAmount,
+                                player.getUuid(),
+                                levelService,
+                                config,
+                                playerRef
+                            );
                         } else {
                             // Fallback to default XP gain if SimpleParty is not installed
                             if (!config.get().isDisableXPGainNotification())
-                                NotificationsUtil.sendNotification(playerRef, "Gained " + xpAmount + " XP");
-                            levelService.addXp(player.getUuid(), xpAmount);
+                                NotificationsUtil.sendNotification(playerRef, "Gained " + finalXpAmount + " XP");
+                            levelService.addXp(player.getUuid(), finalXpAmount);
                             XPBarHud.updateHud(playerRef);
                         }
+                        LevelingCore.mobLevelRegistry.remove(entity.getUuid());
+                        LevelingCore.mobLevelPersistence.remove(entity.getUuid());
                         var levelAfter = levelService.getLevel(player.getUuid());
                         if (levelAfter > levelBefore) {
                             if (config.get().isEnableLevelChatMsgs())

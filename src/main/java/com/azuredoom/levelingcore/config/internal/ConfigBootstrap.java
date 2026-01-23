@@ -33,6 +33,9 @@ public final class ConfigBootstrap {
         Map<Integer, List<RewardEntry>> levelRewardMapping,
         Map<String, Integer> itemLevelMapping,
         Map<Integer, Integer> statsPerLevelMapping,
+        Map<String, Integer> mobInstanceMapping,
+        Map<String, Integer> mobZoneMapping,
+        Map<String, Integer> mobBiomeMapping,
         AutoCloseable closeable
     ) {}
 
@@ -67,6 +70,9 @@ public final class ConfigBootstrap {
         var levelRewardMapping = LevelingCore.levelRewardMapping;
         var itemLevelMapping = LevelingCore.itemLevelMapping;
         var statsPerLevelMapping = LevelingCore.apMap;
+        var mobInstanceMapping = LevelingCore.mobInstanceMapping;
+        var mobZoneMapping = LevelingCore.mobZoneMapping;
+        var mobBiomeMapping = LevelingCore.mobBiomeMapping;
 
         return new Bootstrap(
             service,
@@ -74,6 +80,9 @@ public final class ConfigBootstrap {
             levelRewardMapping,
             itemLevelMapping,
             statsPerLevelMapping,
+            mobInstanceMapping,
+            mobZoneMapping,
+            mobBiomeMapping,
             repo::close
         );
     }

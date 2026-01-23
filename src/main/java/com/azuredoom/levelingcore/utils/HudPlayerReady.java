@@ -25,25 +25,23 @@ public class HudPlayerReady {
         var store = ref.getStore();
         var world = store.getExternalData().getWorld();
 
-        world.execute(() -> {
-            LevelingCoreApi.getLevelServiceIfPresent().ifPresent(levelService1 -> {
-                var playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-                if (playerRef == null)
-                    return;
-                var xpHud = new XPBarHud(playerRef, levelService1, config);
-                if (PluginManager.get().getPlugin(new PluginIdentifier("Buuz135", "MultipleHUD")) != null) {
-                    MultipleHudCompat.showHud(player, playerRef, xpHud);
-                } else {
-                    player.sendMessage(
-                        Message.raw(
-                            "LevelingCore Error: MultipleHUD not found, XP HUD will not work correctly with other mods adding custom UI"
-                        )
-                    );
-                    LevelingCore.LOGGER.at(Level.WARNING)
-                        .log("MultipleHUD not found, XP HUD will not work correctly with other mods adding custom UI");
-                    player.getHudManager().setCustomHud(playerRef, xpHud);
-                }
-            });
-        });
+        world.execute(() -> LevelingCoreApi.getLevelServiceIfPresent().ifPresent(levelService1 -> {
+            var playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            if (playerRef == null)
+                return;
+            var xpHud = new XPBarHud(playerRef, levelService1, config);
+            if (PluginManager.get().getPlugin(new PluginIdentifier("Buuz135", "MultipleHUD")) != null) {
+                MultipleHudCompat.showHud(player, playerRef, xpHud);
+            } else {
+                player.sendMessage(
+                    Message.raw(
+                        "LevelingCore Error: MultipleHUD not found, XP HUD will not work correctly with other mods adding custom UI"
+                    )
+                );
+                LevelingCore.LOGGER.at(Level.WARNING)
+                    .log("MultipleHUD not found, XP HUD will not work correctly with other mods adding custom UI");
+                player.getHudManager().setCustomHud(playerRef, xpHud);
+            }
+        }));
     }
 }

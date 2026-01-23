@@ -88,4 +88,8 @@ public class TableLevelFormula implements LevelFormula {
         var level = insertionPoint - 1;
         return Math.max(1, Math.min(level, xpByLevel.length - 1));
     }
+
+    public int getMaxLevel() {
+        return xpByLevel.length - 1;
+    }
 }

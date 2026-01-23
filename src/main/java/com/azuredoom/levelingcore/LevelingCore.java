@@ -21,6 +21,11 @@ import com.azuredoom.levelingcore.config.internal.ConfigBootstrap;
 import com.azuredoom.levelingcore.exceptions.LevelingCoreException;
 import com.azuredoom.levelingcore.level.LevelServiceImpl;
 import com.azuredoom.levelingcore.level.itemlevellock.ItemToLevelMapping;
+import com.azuredoom.levelingcore.level.mobs.MobLevelPersistence;
+import com.azuredoom.levelingcore.level.mobs.MobLevelRegistry;
+import com.azuredoom.levelingcore.level.mobs.mapping.MobBiomeMapping;
+import com.azuredoom.levelingcore.level.mobs.mapping.MobInstanceMapping;
+import com.azuredoom.levelingcore.level.mobs.mapping.MobZoneMapping;
 import com.azuredoom.levelingcore.level.rewards.LevelRewards;
 import com.azuredoom.levelingcore.level.rewards.RewardEntry;
 import com.azuredoom.levelingcore.level.stats.StatsPerLevelMapping;
@@ -30,11 +35,14 @@ import com.azuredoom.levelingcore.ui.hud.XPBarHud;
 import com.azuredoom.levelingcore.utils.HudPlayerReady;
 import com.azuredoom.levelingcore.utils.LevelDownListenerRegistrar;
 import com.azuredoom.levelingcore.utils.LevelUpListenerRegistrar;
-import com.azuredoom.levelingcore.utils.StrCombatSystem;
+import com.azuredoom.levelingcore.utils.LevelingCoreCombatSystem;
 
+@SuppressWarnings("removal")
 public class LevelingCore extends JavaPlugin {
 
     public static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+
+    public static final Path configDataPath = Paths.get("./mods/levelingcore_LevelingCore/data/config/");
 
     public static final Path configPath = Paths.get("./mods/levelingcore_LevelingCore/data/config/");
 
@@ -57,6 +65,18 @@ public class LevelingCore extends JavaPlugin {
     );
 
     public static final Map<Integer, Integer> apMap = StatsPerLevelMapping.loadOrCreate(LevelingCore.configPath);
+
+    public static final Map<String, Integer> mobInstanceMapping = MobInstanceMapping.loadOrCreate(
+        LevelingCore.configPath
+    );
+
+    public static final Map<String, Integer> mobZoneMapping = MobZoneMapping.loadOrCreate(LevelingCore.configPath);
+
+    public static final Map<String, Integer> mobBiomeMapping = MobBiomeMapping.loadOrCreate(LevelingCore.configPath);
+
+    public static final MobLevelRegistry mobLevelRegistry = new MobLevelRegistry();
+
+    public static final MobLevelPersistence mobLevelPersistence = new MobLevelPersistence();
 
     /**
      * Constructs a new {@code LevelingCore} instance and initializes the core components of the leveling system. This
@@ -91,6 +111,7 @@ public class LevelingCore extends JavaPlugin {
                 PlayerReadyEvent.class,
                 (playerReadyEvent -> {
                     var player = playerReadyEvent.getPlayer();
+                    var store = playerReadyEvent.getPlayerRef().getStore();
                     if (player != null) {
                         LevelingCoreApi.getLevelServiceIfPresent().ifPresent(levelService -> {
                             var uuid = player.getUuid();
@@ -121,6 +142,7 @@ public class LevelingCore extends JavaPlugin {
                 LevelUpListenerRegistrar.clear(event.getPlayerRef().getUuid());
                 LevelDownListenerRegistrar.clear(event.getPlayerRef().getUuid());
             });
+        LevelingCore.mobLevelPersistence.load();
     }
 
     /**
@@ -132,6 +154,7 @@ public class LevelingCore extends JavaPlugin {
      */
     @Override
     protected void shutdown() {
+        LevelingCore.mobLevelPersistence.save();
         super.shutdown();
         LOGGER.at(Level.INFO).log("Leveling Core shutting down");
         try {
@@ -172,10 +195,11 @@ public class LevelingCore extends JavaPlugin {
     }
 
     public void registerAllSystems() {
+        getEntityStoreRegistry().registerSystem(new MobLevelSystem(config));
         getEntityStoreRegistry().registerSystem(new LevelUpTickingSystem(config));
         getEntityStoreRegistry().registerSystem(new LevelDownTickingSystem(config));
         getEntityStoreRegistry().registerSystem(new GainXPEventSystem(config));
         getEntityStoreRegistry().registerSystem(new LossXPEventSystem(config));
-        getEntityStoreRegistry().registerSystem(new StrCombatSystem(config));
+        getEntityStoreRegistry().registerSystem(new LevelingCoreCombatSystem(config));
     }
 }

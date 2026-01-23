@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.azuredoom.levelingcore.LevelingCore;
 
+@SuppressWarnings("removal")
 public final class LevelUpRewardsUtil {
 
     private static final ConcurrentHashMap<UUID, Integer> LAST_REWARDED_LEVEL =
