@@ -253,6 +253,8 @@ if (keyPropsFile.exists()) {
 
             def optionalDeps = [
                     "simpleparty",
+                    "partypro",
+                    "party-info",
                     "better-modlist"
             ]
 
