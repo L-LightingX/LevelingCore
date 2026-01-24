@@ -66,7 +66,8 @@ public class JdbcLevelRepository {
             stmt.execute("ALTER TABLE player_levels ADD COLUMN IF NOT EXISTS agi INT DEFAULT 0 NOT NULL");
             stmt.execute("ALTER TABLE player_levels ADD COLUMN IF NOT EXISTS per INT DEFAULT 0 NOT NULL");
             stmt.execute("ALTER TABLE player_levels ADD COLUMN IF NOT EXISTS vit INT DEFAULT 0 NOT NULL");
-            stmt.execute("ALTER TABLE player_levels ADD COLUMN IF NOT EXISTS int INT DEFAULT 0 NOT NULL");
+            stmt.execute("ALTER TABLE player_levels ADD COLUMN IF NOT EXISTS intelligence INT DEFAULT 0 NOT NULL");
+            stmt.execute("ALTER TABLE player_levels ADD COLUMN IF NOT EXISTS con INT DEFAULT 0 NOT NULL");
             stmt.execute("ALTER TABLE player_levels ADD COLUMN IF NOT EXISTS ability_points INT DEFAULT 5 NOT NULL");
             stmt.execute(
                 "ALTER TABLE player_levels ADD COLUMN IF NOT EXISTS used_ability_points INT DEFAULT 0 NOT NULL"
@@ -315,15 +316,16 @@ public class JdbcLevelRepository {
      * @throws LevelingCoreException if any database operation fails, such as connection issues or invalid SQL.
      */
     public void save(PlayerLevelData data) {
-        var updateSql = """
-                UPDATE player_levels
-                SET xp = ?, str = ?, agi = ?, per = ?, vit = ?, int = ?, ability_points = ?, used_ability_points = ?
-                WHERE player_id = ?
-            """;
+        var updateSql =
+            """
+                    UPDATE player_levels
+                    SET xp = ?, str = ?, agi = ?, per = ?, vit = ?, intelligence = ?, con = ?, ability_points = ?, used_ability_points = ?
+                    WHERE player_id = ?
+                """;
         var insertSql = """
                 INSERT INTO player_levels
-                (player_id, xp, str, agi, per, vit, int, ability_points, used_ability_points)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (player_id, xp, str, agi, per, vit, intelligence, con, ability_points, used_ability_points)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
         try (Connection connection = dataSource.getConnection()) {
@@ -335,9 +337,10 @@ public class JdbcLevelRepository {
                 ps.setInt(4, data.getPer());
                 ps.setInt(5, data.getVit());
                 ps.setInt(6, data.getIntelligence());
-                ps.setInt(7, data.getAbilityPoints());
-                ps.setInt(8, data.getUsedAbilityPoints());
-                ps.setString(9, data.getPlayerId().toString());
+                ps.setInt(7, data.getCon());
+                ps.setInt(8, data.getAbilityPoints());
+                ps.setInt(9, data.getUsedAbilityPoints());
+                ps.setString(10, data.getPlayerId().toString());
                 updated = ps.executeUpdate();
             }
 
@@ -350,8 +353,9 @@ public class JdbcLevelRepository {
                     ps.setInt(5, data.getPer());
                     ps.setInt(6, data.getVit());
                     ps.setInt(7, data.getIntelligence());
-                    ps.setInt(8, data.getAbilityPoints());
-                    ps.setInt(9, data.getUsedAbilityPoints());
+                    ps.setInt(8, data.getCon());
+                    ps.setInt(9, data.getAbilityPoints());
+                    ps.setInt(10, data.getUsedAbilityPoints());
                     ps.executeUpdate();
                 }
             }
@@ -373,7 +377,7 @@ public class JdbcLevelRepository {
      */
     public PlayerLevelData load(UUID id) {
         var sql = """
-                SELECT xp, str, agi, per, vit, int, ability_points, used_ability_points
+                SELECT xp, str, agi, per, vit, intelligence, con, ability_points, used_ability_points
                 FROM player_levels
                 WHERE player_id = ?
             """;
@@ -393,7 +397,8 @@ public class JdbcLevelRepository {
                 data.setAgi(rs.getInt("agi"));
                 data.setPer(rs.getInt("per"));
                 data.setVit(rs.getInt("vit"));
-                data.setIntelligence(rs.getInt("int"));
+                data.setIntelligence(rs.getInt("intelligence"));
+                data.setCon(rs.getInt("con"));
                 data.setAbilityPoints(rs.getInt("ability_points"));
                 data.setUsedAbilityPoints(rs.getInt("used_ability_points"));
                 return data;
