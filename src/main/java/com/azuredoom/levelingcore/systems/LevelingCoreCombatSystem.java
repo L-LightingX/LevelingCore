@@ -1,4 +1,4 @@
-package com.azuredoom.levelingcore.utils;
+package com.azuredoom.levelingcore.systems;
 
 import com.hypixel.hytale.component.*;
 import com.hypixel.hytale.component.dependency.Dependency;
@@ -8,21 +8,28 @@ import com.hypixel.hytale.component.dependency.SystemGroupDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.EntityEventSystem;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageModule;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageSystems;
+import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
+import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
+import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
+import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.Config;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 
 import java.util.Set;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
 import com.azuredoom.levelingcore.LevelingCore;
 import com.azuredoom.levelingcore.api.LevelingCoreApi;
 import com.azuredoom.levelingcore.config.GUIConfig;
+import com.azuredoom.levelingcore.utils.MobLevelingUtil;
 
 public class LevelingCoreCombatSystem extends EntityEventSystem<EntityStore, Damage> {
 
@@ -43,6 +50,11 @@ public class LevelingCoreCombatSystem extends EntityEventSystem<EntityStore, Dam
     ) {
         if (damage.isCancelled())
             return;
+
+        var levelServiceOpt = LevelingCoreApi.getLevelServiceIfPresent();
+        if (levelServiceOpt.isEmpty())
+            return;
+        var levelService = levelServiceOpt.get();
 
         var cause = damage.getCause();
         if (cause == null)
@@ -66,11 +78,6 @@ public class LevelingCoreCombatSystem extends EntityEventSystem<EntityStore, Dam
             return;
 
         if (playerAttacker != null) {
-            var levelServiceOpt = LevelingCoreApi.getLevelServiceIfPresent();
-            if (levelServiceOpt.isEmpty())
-                return;
-            var levelService = levelServiceOpt.get();
-
             var attackerPlayerRef = store.getComponent(attackerRef, PlayerRef.getComponentType());
             if (attackerPlayerRef == null)
                 return;
@@ -79,6 +86,7 @@ public class LevelingCoreCombatSystem extends EntityEventSystem<EntityStore, Dam
             var level = levelService.getLevel(uuid);
 
             var itemHand = playerAttacker.getInventory().getItemInHand();
+            if (itemHand == null) return;
             var itemId = itemHand.getItemId();
             if (itemId != null && !itemId.isBlank()) {
                 var requiredLevel = LevelingCore.itemLevelMapping.get(itemId);
@@ -92,15 +100,21 @@ public class LevelingCoreCombatSystem extends EntityEventSystem<EntityStore, Dam
                     return;
                 }
             }
-
-            if (isProjectile) {
-                var per = levelService.getPer(uuid);
-                damage.setAmount((float) (damage.getAmount() * (1.0 + per * config.get().getPerStatMultiplier())));
-            } else {
-                var str = levelService.getStr(uuid);
-                damage.setAmount((float) (damage.getAmount() * (1.0 + str * config.get().getStrStatMultiplier())));
-            }
-
+            var entityStatMapComponent = archetypeChunk.getComponent(index, EntityStatMap.getComponentType());
+            var healthStat = DefaultEntityStatTypes.getHealth();
+            var healthValue = entityStatMapComponent.get(healthStat);
+            var world = store.getExternalData().getWorld();
+            world.execute(() -> {
+                if (isProjectile) {
+                    var per = levelService.getPer(uuid);
+                    damage.setAmount((float) (damage.getAmount() * (1.0 + per * config.get().getPerStatMultiplier())));
+                    damage.setCancelled(true);
+                } else {
+                    var str = levelService.getStr(uuid);
+                    damage.setAmount((float) (damage.getAmount() * (1.0 + str * config.get().getStrStatMultiplier())));
+                    damage.setCancelled(true);
+                }
+            });
             return;
         }
 
@@ -132,5 +146,23 @@ public class LevelingCoreCombatSystem extends EntityEventSystem<EntityStore, Dam
     @Override
     public Query<EntityStore> getQuery() {
         return Archetype.empty();
+    }
+
+    private static float safeScaledDamage(float base, double mult, float min, float max) {
+        if (!Float.isFinite(base) || base <= 0f) return base;
+
+        if (!Double.isFinite(mult)) mult = 1.0;
+        mult = Math.max(0.0, Math.min(mult, 50.0)); // <= 50x cap (tune this)
+
+        var out = base * mult;
+
+        if (!Double.isFinite(out)) out = max;
+        var f = (float) out;
+
+        if (!Float.isFinite(f)) f = max;
+        if (f < min) f = min;
+        if (f > max) f = max;
+
+        return f;
     }
 }
