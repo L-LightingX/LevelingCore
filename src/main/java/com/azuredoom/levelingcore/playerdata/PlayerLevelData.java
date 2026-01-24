@@ -23,6 +23,8 @@ public class PlayerLevelData {
 
     private int intelligence;
 
+    private int con;
+
     private int abilityPoints;
 
     private int usedAbilityPoints;
@@ -99,6 +101,14 @@ public class PlayerLevelData {
 
     public void setIntelligence(int intelligence) {
         this.intelligence = intelligence;
+    }
+
+    public int getCon() {
+        return con;
+    }
+
+    public void setCon(int con) {
+        this.con = con;
     }
 
     public int getAbilityPoints() {

@@ -31,11 +31,11 @@ import com.azuredoom.levelingcore.level.rewards.RewardEntry;
 import com.azuredoom.levelingcore.level.stats.StatsPerLevelMapping;
 import com.azuredoom.levelingcore.level.xp.XPValues;
 import com.azuredoom.levelingcore.systems.*;
+import com.azuredoom.levelingcore.systems.LevelingCoreCombatSystem;
 import com.azuredoom.levelingcore.ui.hud.XPBarHud;
 import com.azuredoom.levelingcore.utils.HudPlayerReady;
 import com.azuredoom.levelingcore.utils.LevelDownListenerRegistrar;
 import com.azuredoom.levelingcore.utils.LevelUpListenerRegistrar;
-import com.azuredoom.levelingcore.utils.LevelingCoreCombatSystem;
 
 @SuppressWarnings("removal")
 public class LevelingCore extends JavaPlugin {
@@ -135,6 +135,7 @@ public class LevelingCore extends JavaPlugin {
                     HudPlayerReady.ready(playerReadyEvent, config);
                 })
             );
+        this.getEntityStoreRegistry().registerSystem(new DamageFilter());
         // Cleans up various weak hash maps and UI on player disconnect
         this.getEventRegistry()
             .registerGlobal(PlayerDisconnectEvent.class, (event) -> {

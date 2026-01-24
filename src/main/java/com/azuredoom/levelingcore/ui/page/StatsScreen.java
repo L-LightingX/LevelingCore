@@ -69,6 +69,11 @@ public class StatsScreen extends InteractiveCustomUIPage<StatsScreen.BindingData
             "#AddInt",
             new EventData().append("Type", "SpendStat").append("Stat", "int")
         );
+        uiEventBuilder.addEventBinding(
+            CustomUIEventBindingType.Activating,
+            "#AddCon",
+            new EventData().append("Type", "SpendStat").append("Stat", "con")
+        );
     }
 
     public void update(UICommandBuilder uiCommandBuilder) {
@@ -85,6 +90,7 @@ public class StatsScreen extends InteractiveCustomUIPage<StatsScreen.BindingData
         uiCommandBuilder.set("#AddPer" + ".HitTestVisible", hasAbilityPoints);
         uiCommandBuilder.set("#AddVit" + ".HitTestVisible", hasAbilityPoints);
         uiCommandBuilder.set("#AddInt" + ".HitTestVisible", hasAbilityPoints);
+        uiCommandBuilder.set("#AddCon" + ".HitTestVisible", hasAbilityPoints);
         uiCommandBuilder.set(
             "#STR.TextSpans",
             Message.raw("STR: " + levelServiceImpl.getStr(playerRef.getUuid()))
@@ -104,6 +110,10 @@ public class StatsScreen extends InteractiveCustomUIPage<StatsScreen.BindingData
         uiCommandBuilder.set(
             "#INT.TextSpans",
             Message.raw("INT: " + levelServiceImpl.getInt(playerRef.getUuid()))
+        );
+        uiCommandBuilder.set(
+            "#CON.TextSpans",
+            Message.raw("CON: " + levelServiceImpl.getCon(playerRef.getUuid()))
         );
         uiCommandBuilder.set(
             "#PNTSLabel.TextSpans",
@@ -170,6 +180,7 @@ public class StatsScreen extends InteractiveCustomUIPage<StatsScreen.BindingData
             case "per" -> levelService.setPer(uuid, levelService.getPer(uuid) + 1);
             case "vit" -> levelService.setVit(uuid, levelService.getVit(uuid) + 1);
             case "int" -> levelService.setInt(uuid, levelService.getInt(uuid) + 1);
+            case "con" -> levelService.setCon(uuid, levelService.getCon(uuid) + 1);
             default -> {
                 playerRef.sendMessage(CommandLang.UNKNOWN_STAT.param("stat", data.Stat));
                 this.refreshUI();

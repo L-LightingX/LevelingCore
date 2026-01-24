@@ -39,6 +39,8 @@ public class LevelServiceImpl {
 
     private final List<IntelligenceListener> intListeners = new ArrayList<>();
 
+    private final List<ConstitutionListener> conListeners = new ArrayList<>();
+
     private final List<AbilityPointsListener> abilityPointsListeners = new ArrayList<>();
 
     public LevelServiceImpl(LevelFormula formula, JdbcLevelRepository repository) {
@@ -296,6 +298,18 @@ public class LevelServiceImpl {
         return get(id).getIntelligence();
     }
 
+    public void setCon(UUID id, int con) {
+        var data = get(id);
+        data.setCon(con);
+        repository.save(data);
+
+        conListeners.forEach(l -> l.onConstitutionGain(id, con));
+    }
+
+    public int getCon(UUID id) {
+        return get(id).getCon();
+    }
+
     public void setAbilityPoints(UUID id, int abilityPoints) {
         var data = get(id);
         data.setAbilityPoints(abilityPoints);
@@ -483,6 +497,14 @@ public class LevelServiceImpl {
 
     public List<IntelligenceListener> getIntelligenceListeners() {
         return intListeners;
+    }
+
+    public void registerConstitutionListener(ConstitutionListener listener) {
+        conListeners.add(listener);
+    }
+
+    public List<ConstitutionListener> getConstitutionListeners() {
+        return conListeners;
     }
 
     /**
