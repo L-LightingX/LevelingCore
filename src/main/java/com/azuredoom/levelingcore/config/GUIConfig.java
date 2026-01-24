@@ -299,7 +299,7 @@ public class GUIConfig {
 
     private float mobHealthMultiplier = 2.10F;
 
-    private float mobDamageMultiplier = 0.5F;
+    private float mobDamageMultiplier = 0.25F;
 
     private float mobRangeDamageMultiplier = 0.3F;
 
