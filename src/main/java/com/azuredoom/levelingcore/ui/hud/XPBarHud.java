@@ -1,6 +1,5 @@
 package com.azuredoom.levelingcore.ui.hud;
 
-import com.azuredoom.levelingcore.compat.PartyProCompat;
 import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud;
@@ -12,6 +11,7 @@ import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 import java.util.WeakHashMap;
 
+import com.azuredoom.levelingcore.compat.PartyProCompat;
 import com.azuredoom.levelingcore.config.GUIConfig;
 import com.azuredoom.levelingcore.level.LevelServiceImpl;
 
