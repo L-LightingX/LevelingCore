@@ -82,6 +82,7 @@ public class SkillPointResetInteraction extends SimpleInstantInteraction {
         statMap.removeModifier(DefaultEntityStatTypes.getStamina(), STAMINA_MOD_KEY);
         statMap.removeModifier(DefaultEntityStatTypes.getOxygen(), OXYGEN_MOD_KEY);
         statMap.removeModifier(DefaultEntityStatTypes.getMana(), MANA_MOD_KEY);
+        statMap.setStatValue(DefaultEntityStatTypes.getMana(), 0);
 
         var levelService = LevelingCoreApi.getLevelServiceIfPresent().orElse(null);
         if (levelService == null) {
