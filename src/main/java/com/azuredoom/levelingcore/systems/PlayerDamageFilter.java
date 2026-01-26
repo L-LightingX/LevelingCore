@@ -1,5 +1,7 @@
 package com.azuredoom.levelingcore.systems;
 
+import com.azuredoom.levelingcore.LevelingCore;
+import com.azuredoom.levelingcore.utils.MobLevelingUtil;
 import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Store;
@@ -22,11 +24,11 @@ import javax.annotation.Nullable;
 import com.azuredoom.levelingcore.api.LevelingCoreApi;
 import com.azuredoom.levelingcore.config.GUIConfig;
 
-public class DamageFilter extends DamageEventSystem {
+public class PlayerDamageFilter extends DamageEventSystem {
 
     private Config<GUIConfig> config;
 
-    public DamageFilter(Config<GUIConfig> config) {
+    public PlayerDamageFilter(Config<GUIConfig> config) {
         this.config = config;
     }
 
@@ -65,10 +67,30 @@ public class DamageFilter extends DamageEventSystem {
         if (incoming <= 0f)
             return;
 
+        var cause = damage.getCause();
+        if (cause == null)
+            return;
+
+        var causeId = cause.getId();
+        var causeIdLower = causeId == null ? "" : causeId.toLowerCase();
+        var isProjectile = causeIdLower.contains("projectile") || causeIdLower.contains("arrow");
+
+        var mobLevelData = LevelingCore.mobLevelRegistry.getOrCreate(
+                npcAttacker.getUuid(),
+                () -> MobLevelingUtil.computeSpawnLevel(npcAttacker)
+        );
+        var mobLevel = mobLevelData.level;
+        var meleeMulti = config.get().getMobDamageMultiplier();
+        var projectileMulti = config.get().getMobRangeDamageMultiplier();
+
         var con = levelService.getCon(victimPlayerRef.getUuid());
         var mult = conDamageMultiplier(con);
 
-        damage.setAmount(incoming * mult);
+        if (isProjectile) {
+            damage.setAmount(incoming * mult * projectileMulti * mobLevel);
+        } else {
+            damage.setAmount(incoming * mult * meleeMulti * mobLevel);
+        }
     }
 
     @Nullable

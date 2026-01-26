@@ -139,7 +139,7 @@ public class LevelingCore extends JavaPlugin {
                     HudPlayerReady.ready(playerReadyEvent, config);
                 })
             );
-        this.getEntityStoreRegistry().registerSystem(new DamageFilter(config));
+        this.getEntityStoreRegistry().registerSystem(new PlayerDamageFilter(config));
         this.getEntityStoreRegistry().registerSystem(new MobDamageFilter(config));
         // Cleans up various weak hash maps and UI on player disconnect
         this.getEventRegistry()
