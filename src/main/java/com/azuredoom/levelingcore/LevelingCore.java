@@ -37,6 +37,7 @@ import com.azuredoom.levelingcore.ui.hud.XPBarHud;
 import com.azuredoom.levelingcore.utils.HudPlayerReady;
 import com.azuredoom.levelingcore.utils.LevelDownListenerRegistrar;
 import com.azuredoom.levelingcore.utils.LevelUpListenerRegistrar;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 
 @SuppressWarnings("removal")
 public class LevelingCore extends JavaPlugin {
@@ -79,25 +80,12 @@ public class LevelingCore extends JavaPlugin {
 
     public static final MobLevelPersistence mobLevelPersistence = new MobLevelPersistence();
 
-    /**
-     * Constructs a new {@code LevelingCore} instance and initializes the core components of the leveling system. This
-     * constructor takes a non-null {@link JavaPluginInit} object to set up the necessary dependencies and
-     * configurations required for the leveling system to function.
-     *
-     * @param init a {@link JavaPluginInit} instance used to initialize the plugin environment and dependencies. Must
-     *             not be {@code null}.
-     */
     public LevelingCore(@Nonnull JavaPluginInit init) {
         super(init);
         INSTANCE = this;
         config = this.withConfig("levelingcore", GUIConfig.CODEC);
     }
 
-    /**
-     * Initializes the core components of the leveling system. This method sets up necessary configurations, registers
-     * commands, and configures systems to handle player leveling and experience management. It also initializes the
-     * singleton instance of the {@code LevelingCore} class.
-     */
     @Override
     protected void setup() {
         INSTANCE = this;
@@ -115,12 +103,14 @@ public class LevelingCore extends JavaPlugin {
                 PlayerReadyEvent.class,
                 (playerReadyEvent -> {
                     var player = playerReadyEvent.getPlayer();
-                    var playerRef = playerReadyEvent.getPlayerRef();
-                    var store = playerRef.getStore();
+                    
+                    // FIX: The event returns a generic Ref<EntityStore>, we need to fetch the Component
+                    var entityRef = playerReadyEvent.getPlayerRef();
+                    var store = entityRef.getStore();
+                    var playerRef = store.getComponent(entityRef, PlayerRef.getComponentType());
 
-                    if (player != null) {
-                        // PERFORMANCE FIX: Register listeners here via Event instead of Ticking Systems.
-                        // This moves CPU usage from "Every Tick" to "Once per Login".
+                    if (player != null && playerRef != null) {
+                        // Register listeners immediately (Zero Latency, Zero Tick Cost)
                         LevelUpListenerRegistrar.ensureRegistered(store, player, playerRef, config);
                         LevelDownListenerRegistrar.ensureRegistered(store, player, playerRef, config);
 
@@ -158,13 +148,6 @@ public class LevelingCore extends JavaPlugin {
         LevelingCore.mobLevelPersistence.load();
     }
 
-    /**
-     * Shuts down the {@code LevelingCore} instance and releases allocated resources. This method performs cleanup
-     * operations required to properly terminate the leveling system. It includes closing any resources associated with
-     * the {@code bootstrap} object and logging the shutdown process.
-     *
-     * @throws LevelingCoreException if resource cleanup fails.
-     */
     @Override
     protected void shutdown() {
         LevelingCore.mobLevelPersistence.save();
@@ -177,23 +160,10 @@ public class LevelingCore extends JavaPlugin {
         }
     }
 
-    /**
-     * Retrieves the {@link LevelServiceImpl} instance managed by the {@code LevelingCore} class. The
-     * {@code LevelService} provides methods for managing player levels and experience points (XP).
-     *
-     * @return the {@link LevelServiceImpl} instance used by the leveling system.
-     */
     public static LevelServiceImpl getLevelService() {
         return levelingService;
     }
 
-    /**
-     * Provides access to the singleton instance of the {@code LevelingCore} class. This instance serves as the primary
-     * entry point for managing the core functionality of the leveling system, including initialization, configuration,
-     * and lifecycle management.
-     *
-     * @return the singleton instance of {@code LevelingCore}.
-     */
     public static LevelingCore getInstance() {
         return INSTANCE;
     }
@@ -209,11 +179,7 @@ public class LevelingCore extends JavaPlugin {
 
     public void registerAllSystems() {
         getEntityStoreRegistry().registerSystem(new MobLevelSystem(config));
-        // PERFORMANCE FIX: Removed LevelUp/Down Ticking Systems.
-        // They are no longer needed as we handle registration in PlayerReadyEvent.
-        // getEntityStoreRegistry().registerSystem(new LevelUpTickingSystem(config));
-        // getEntityStoreRegistry().registerSystem(new LevelDownTickingSystem(config));
-        
+        // Ticking Systems removed as they are now handled by PlayerReadyEvent
         getEntityStoreRegistry().registerSystem(new GainXPEventSystem(config));
         getEntityStoreRegistry().registerSystem(new LossXPEventSystem(config));
     }
