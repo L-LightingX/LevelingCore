@@ -1,5 +1,6 @@
 package com.azuredoom.levelingcore.systems;
 
+import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Store;
@@ -34,13 +35,12 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
 
     private Config<GUIConfig> config;
     
-    // Fixed Generic Types (Store, Component)
+    // Correct Generic Types
     private final ComponentType<EntityStore, NPCEntity> npcType;
     private final ComponentType<EntityStore, TransformComponent> transformType;
 
     public MobLevelSystem(Config<GUIConfig> config) {
         this.config = config;
-        // Fetch types in constructor
         this.npcType = NPCEntity.getComponentType();
         this.transformType = TransformComponent.getComponentType();
     }
@@ -53,7 +53,7 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
         @NonNullDecl Store<EntityStore> store,
         @NonNullDecl CommandBuffer<EntityStore> commandBuffer
     ) {
-        // 1. Global Periodic Save (10s) - Run at the very start of a chunk
+        // 1. Global Periodic Save (10s)
         if (index == 0) {
             long now = System.currentTimeMillis();
             if (now - lastSaveTime > 10000) {
@@ -66,13 +66,13 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
         }
 
         // 2. Retrieve Components
+        // Because getQuery() filters for us, we know these components exist.
         final var holder = EntityUtils.toHolder(index, archetypeChunk);
+        
+        // We can safely get these without null checks because of the Query
         final var npc = holder.getComponent(this.npcType);
         final var transform = holder.getComponent(this.transformType);
         
-        // Safety check to ensure we are only processing Mobs with positions
-        if (npc == null || transform == null) return;
-
         // 3. Logic Throttle (2s per mob)
         final var entityId = npc.getUuid();
         var data = LevelingCore.mobLevelRegistry.getOrCreateWithPersistence(
@@ -93,7 +93,7 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
         store.getExternalData().getWorld().execute(() -> {
             long currentTime = System.currentTimeMillis();
             
-            // Cache Timer (1s) - Prevents Disk I/O lag
+            // Cache Timer (1s)
             if (currentTime - lastCacheUpdate > 1000 || cachedMaxLevel == -1) {
                 updateMaxLevelCache();
                 lastCacheUpdate = currentTime;
@@ -105,13 +105,11 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
                 Math.min(cachedMaxLevel, MobLevelingUtil.computeDynamicLevel(config, npc, transform, store))
             );
 
-            // Update Level Data
             if (newLevel != data.level) {
                 data.level = newLevel;
             }
             data.lastRecalcTick = currentTime;
 
-            // Apply scaling
             if (data.level != data.lastAppliedLevel) {
                 MobLevelingUtil.applyMobScaling(config, npc, data.level, store);
                 data.lastAppliedLevel = data.level;
@@ -144,7 +142,9 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
     @NullableDecl
     @Override
     public Query<EntityStore> getQuery() {
-        // Guaranteed to work based on original file contents
-        return Query.any();
+        // PERFORMANCE FIX:
+        // Using Archetype.of(...) creates a filter that matches ONLY entities with these components.
+        // This prevents the system from running on Items, Arrows, and Particles.
+        return Archetype.of(this.npcType, this.transformType);
     }
 }
