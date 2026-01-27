@@ -25,15 +25,14 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
-    - name: Remove problematic compat files
-      # This deletes the files that are looking for mods GitHub can't find
+    - name: Create Dummy Compat Files
+      # This overwrites the broken files with empty versions that don't need external mods
       run: |
-        rm src/main/java/com/azuredoom/levelingcore/compat/PartyPluginCompat.java
-        rm src/main/java/com/azuredoom/levelingcore/compat/SimplePartyCompat.java
-        rm src/main/java/com/azuredoom/levelingcore/compat/PartyProCompat.java
+        echo "package com.azuredoom.levelingcore.compat; import java.util.UUID; public class PartyPluginCompat { public static void onXPGain(Object... a) {} }" > src/main/java/com/azuredoom/levelingcore/compat/PartyPluginCompat.java
+        echo "package com.azuredoom.levelingcore.compat; import java.util.UUID; public class SimplePartyCompat { public static void onXPGain(Object... a) {} }" > src/main/java/com/azuredoom/levelingcore/compat/SimplePartyCompat.java
+        echo "package com.azuredoom.levelingcore.compat; import java.util.UUID; public class PartyProCompat { public static void onXPGain(Object... a) { } public static void showLvlOnHUD(Object... a) {} }" > src/main/java/com/azuredoom/levelingcore/compat/PartyProCompat.java
 
     - name: Build Mod
-      # We use -x test to skip tests that might also fail due to missing dependencies
       run: ./gradlew build -x test
 
     - name: Upload Mod Artifact
