@@ -108,14 +108,22 @@ public class LevelingCore extends JavaPlugin {
         this.registerAllSystems();
         this.getCodecRegistry(Interaction.CODEC)
             .register("SkillPointResetInteraction", SkillPointResetInteraction.class, SkillPointResetInteraction.CODEC);
+        
         // Adds the UI to the player and ensures AP stats are applied
         this.getEventRegistry()
             .registerGlobal(
                 PlayerReadyEvent.class,
                 (playerReadyEvent -> {
                     var player = playerReadyEvent.getPlayer();
-                    var store = playerReadyEvent.getPlayerRef().getStore();
+                    var playerRef = playerReadyEvent.getPlayerRef();
+                    var store = playerRef.getStore();
+
                     if (player != null) {
+                        // PERFORMANCE FIX: Register listeners here via Event instead of Ticking Systems.
+                        // This moves CPU usage from "Every Tick" to "Once per Login".
+                        LevelUpListenerRegistrar.ensureRegistered(store, player, playerRef, config);
+                        LevelDownListenerRegistrar.ensureRegistered(store, player, playerRef, config);
+
                         LevelingCoreApi.getLevelServiceIfPresent().ifPresent(levelService -> {
                             var uuid = player.getUuid();
                             var level = levelService.getLevel(uuid);
@@ -201,8 +209,11 @@ public class LevelingCore extends JavaPlugin {
 
     public void registerAllSystems() {
         getEntityStoreRegistry().registerSystem(new MobLevelSystem(config));
-        getEntityStoreRegistry().registerSystem(new LevelUpTickingSystem(config));
-        getEntityStoreRegistry().registerSystem(new LevelDownTickingSystem(config));
+        // PERFORMANCE FIX: Removed LevelUp/Down Ticking Systems.
+        // They are no longer needed as we handle registration in PlayerReadyEvent.
+        // getEntityStoreRegistry().registerSystem(new LevelUpTickingSystem(config));
+        // getEntityStoreRegistry().registerSystem(new LevelDownTickingSystem(config));
+        
         getEntityStoreRegistry().registerSystem(new GainXPEventSystem(config));
         getEntityStoreRegistry().registerSystem(new LossXPEventSystem(config));
     }
