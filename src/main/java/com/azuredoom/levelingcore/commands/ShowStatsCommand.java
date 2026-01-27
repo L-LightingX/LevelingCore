@@ -14,7 +14,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.Config;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
-import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 
 import com.azuredoom.levelingcore.api.LevelingCoreApi;
@@ -31,7 +30,8 @@ public class ShowStatsCommand extends AbstractPlayerCommand {
 
     public ShowStatsCommand(Config<GUIConfig> config) {
         super("showstats", "Shows player stats");
-        this.requirePermission("levelingcore.showstats");
+        // Removed: this.requirePermission("levelingcore.showstats");
+        
         this.playerArg = this.withRequiredArg(
             "player",
             "Player whose statistics are to be viewed",
@@ -39,6 +39,18 @@ public class ShowStatsCommand extends AbstractPlayerCommand {
         );
         this.config = config;
     }
+
+    // --- DROP-IN FIX: Disable Permission Generation ---
+    @Override
+    protected boolean canGeneratePermission() {
+        return false;
+    }
+
+    @Override
+    protected String generatePermissionNode() {
+        return "";
+    }
+    // --------------------------------------------------
 
     @Override
     protected void execute(
@@ -52,17 +64,20 @@ public class ShowStatsCommand extends AbstractPlayerCommand {
             commandContext.sendMessage(CommandLang.NOT_INITIALIZED);
             return;
         }
+
         var player = commandContext.senderAs(Player.class);
 
-        CompletableFuture.runAsync(() -> {
-            if (config.get().isDisableStatPointGainOnLevelUp()) {
-                playerRef.sendMessage(CommandLang.STATS_DISABLED);
-                return;
-            }
-            if (player.getPageManager().getCustomPage() == null) {
-                var page = new StatsScreen(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, config);
-                player.getPageManager().openCustomPage(ref, store, page);
-            }
-        }, world);
+        // Optimization: Removed redundant CompletableFuture.runAsync(..., world)
+        // Command execution is already on the main thread, so we can open the UI directly.
+        
+        if (config.get().isDisableStatPointGainOnLevelUp()) {
+            playerRef.sendMessage(CommandLang.STATS_DISABLED);
+            return;
+        }
+        
+        if (player.getPageManager().getCustomPage() == null) {
+            var page = new StatsScreen(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, config);
+            player.getPageManager().openCustomPage(ref, store, page);
+        }
     }
 }
