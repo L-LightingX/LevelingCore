@@ -18,11 +18,8 @@ import javax.annotation.Nonnull;
 import com.azuredoom.levelingcore.api.LevelingCoreApi;
 import com.azuredoom.levelingcore.config.GUIConfig;
 import com.azuredoom.levelingcore.lang.CommandLang;
+import com.azuredoom.levelingcore.ui.hud.XPBarHud; // REQUIRED IMPORT
 
-/**
- * Represents a command that removes a specific number of levels from a player. This command operates within the
- * Leveling Core system and adjusts the player's level based on the specified number of levels to be removed.
- */
 public class RemoveLevelCommand extends AbstractPlayerCommand {
 
     @Nonnull
@@ -50,23 +47,37 @@ public class RemoveLevelCommand extends AbstractPlayerCommand {
         @NonNullDecl CommandContext commandContext,
         @NonNullDecl Store<EntityStore> store,
         @NonNullDecl Ref<EntityStore> ref,
-        @NonNullDecl PlayerRef playerRef,
+        @NonNullDecl PlayerRef senderRef, // Renamed for clarity
         @NonNullDecl World world
     ) {
-        if (LevelingCoreApi.getLevelServiceIfPresent().isEmpty()) {
+        var levelServiceOpt = LevelingCoreApi.getLevelServiceIfPresent();
+        if (levelServiceOpt.isEmpty()) {
             commandContext.sendMessage(CommandLang.NOT_INITIALIZED);
             return;
         }
-        playerRef = this.playerArg.get(commandContext);
-        var levelRef = this.levelArg.get(commandContext);
-        var playerUUID = playerRef.getUuid();
-        LevelingCoreApi.getLevelServiceIfPresent().get().removeLevel(playerUUID, levelRef);
-        var level = LevelingCoreApi.getLevelServiceIfPresent().get().getLevel(playerUUID);
-        var removeLevelMsg = CommandLang.REMOVE_LEVEL_1.param("level", levelRef)
-            .param("player", playerRef.getUsername());
-        var levelTotalMsg = CommandLang.REMOVE_LEVEL_2.param("player", playerRef.getUsername()).param("level", level);
-        if (config.get().isEnableLevelAndXPTitles())
-            EventTitleUtil.showEventTitleToPlayer(playerRef, levelTotalMsg, removeLevelMsg, true);
+        
+        var levelService = levelServiceOpt.get();
+        PlayerRef targetRef = this.playerArg.get(commandContext);
+        int levelsToRemove = this.levelArg.get(commandContext);
+        var playerUUID = targetRef.getUuid();
+
+        // 1. Modify the backend data
+        levelService.removeLevel(playerUUID, levelsToRemove);
+        
+        // 2. Prepare messages
+        var newLevel = levelService.getLevel(playerUUID);
+        var removeLevelMsg = CommandLang.REMOVE_LEVEL_1.param("level", levelsToRemove)
+            .param("player", targetRef.getUsername());
+        var levelTotalMsg = CommandLang.REMOVE_LEVEL_2.param("player", targetRef.getUsername()).param("level", newLevel);
+        
+        // 3. Update Visuals
+        if (config.get().isEnableLevelAndXPTitles()) {
+            EventTitleUtil.showEventTitleToPlayer(targetRef, levelTotalMsg, removeLevelMsg, true);
+        }
+        
+        // FIX: Tell the client to update the XP Bar UI immediately
+        XPBarHud.updateHud(targetRef);
+
         commandContext.sendMessage(removeLevelMsg);
         commandContext.sendMessage(levelTotalMsg);
     }
