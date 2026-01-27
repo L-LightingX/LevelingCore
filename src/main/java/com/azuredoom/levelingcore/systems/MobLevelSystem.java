@@ -26,11 +26,16 @@ import com.azuredoom.levelingcore.utils.MobLevelingUtil;
 @SuppressWarnings("removal")
 public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
 
+    // Cache to prevent Disk I/O every tick
     private static volatile int cachedMaxLevel = -1;
     private static volatile long lastCacheUpdate = 0;
+    
+    // Global throttling for save operations
     private static volatile long lastSaveTime = 0;
 
     private Config<GUIConfig> config;
+    
+    // Correct Generic Types
     private final ComponentType<EntityStore, NPCEntity> npcType;
     private final ComponentType<EntityStore, TransformComponent> transformType;
 
@@ -48,16 +53,7 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
         @NonNullDecl Store<EntityStore> store,
         @NonNullDecl CommandBuffer<EntityStore> commandBuffer
     ) {
-        // PERFORMANCE FIX: Top-Level Throttle
-        // We only process this mob once every 40 ticks (approx 2 seconds).
-        // This prevents the expensive 'EntityUtils.toHolder' (1.51% lag) from 
-        // running 39 out of 40 times.
-        long worldAge = store.getExternalData().getWorld().getAge();
-        if ((worldAge + index) % 40 != 0) {
-            return;
-        }
-
-        // 1. Global Periodic Save (Check happens only once every 2 seconds now, which is safe)
+        // 1. Global Periodic Save (10s)
         if (index == 0) {
             long now = System.currentTimeMillis();
             if (now - lastSaveTime > 10000) {
@@ -70,13 +66,14 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
         }
 
         // 2. Retrieve Components
-        // This line is the bottleneck. By moving it here, we've reduced its cost by 97%.
+        // Because getQuery() filters for us, we know these components exist.
         final var holder = EntityUtils.toHolder(index, archetypeChunk);
+        
+        // We can safely get these without null checks because of the Query
         final var npc = holder.getComponent(this.npcType);
         final var transform = holder.getComponent(this.transformType);
         
-        if (npc == null || transform == null) return;
-
+        // 3. Logic Throttle (2s per mob)
         final var entityId = npc.getUuid();
         var data = LevelingCore.mobLevelRegistry.getOrCreateWithPersistence(
             entityId,
@@ -87,16 +84,22 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
 
         if (data.locked) return;
 
-        // 3. Execution logic
+        long nowMs = System.currentTimeMillis();
+        if (nowMs - data.lastRecalcTick < 2000) {
+            return;
+        }
+
+        // 4. Execution logic on the World Thread
         store.getExternalData().getWorld().execute(() -> {
             long currentTime = System.currentTimeMillis();
             
-            // Optimization: Only check the config file if 1 second has passed
+            // Cache Timer (1s)
             if (currentTime - lastCacheUpdate > 1000 || cachedMaxLevel == -1) {
                 updateMaxLevelCache();
                 lastCacheUpdate = currentTime;
             }
 
+            // Calculate new level
             var newLevel = Math.max(
                 1,
                 Math.min(cachedMaxLevel, MobLevelingUtil.computeDynamicLevel(config, npc, transform, store))
@@ -105,6 +108,7 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
             if (newLevel != data.level) {
                 data.level = newLevel;
             }
+            data.lastRecalcTick = currentTime;
 
             if (data.level != data.lastAppliedLevel) {
                 MobLevelingUtil.applyMobScaling(config, npc, data.level, store);
@@ -138,6 +142,9 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
     @NullableDecl
     @Override
     public Query<EntityStore> getQuery() {
+        // PERFORMANCE FIX:
+        // Using Archetype.of(...) creates a filter that matches ONLY entities with these components.
+        // This prevents the system from running on Items, Arrows, and Particles.
         return Archetype.of(this.npcType, this.transformType);
     }
 }
