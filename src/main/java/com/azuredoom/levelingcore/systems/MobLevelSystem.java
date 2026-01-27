@@ -34,12 +34,13 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
 
     private Config<GUIConfig> config;
     
-    // Cached Component Types for fast Querying
-    private final ComponentType<NPCEntity> npcType;
-    private final ComponentType<TransformComponent> transformType;
+    // Cached Component Types (Fixed Generics: ComponentType<Store, Component>)
+    private final ComponentType<EntityStore, NPCEntity> npcType;
+    private final ComponentType<EntityStore, TransformComponent> transformType;
 
     public MobLevelSystem(Config<GUIConfig> config) {
         this.config = config;
+        // Fetch types in constructor
         this.npcType = NPCEntity.getComponentType();
         this.transformType = TransformComponent.getComponentType();
     }
@@ -52,7 +53,15 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
         @NonNullDecl Store<EntityStore> store,
         @NonNullDecl CommandBuffer<EntityStore> commandBuffer
     ) {
-        // 1. Global Periodic Save (Kept at 10s for performance safety)
+        // OPTIMIZATION: Manual Archetype Filtering
+        // Since Query.all() caused issues, we filter here.
+        // If this chunk doesn't contain NPCs, we skip it entirely.
+        // This prevents 'toHolder' from running on Items, Arrows, etc.
+        if (!archetypeChunk.hasComponent(this.npcType) || !archetypeChunk.hasComponent(this.transformType)) {
+            return;
+        }
+
+        // 1. Global Periodic Save (10s)
         if (index == 0) {
             long now = System.currentTimeMillis();
             if (now - lastSaveTime > 10000) {
@@ -64,11 +73,14 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
             }
         }
 
-        // 2. Retrieve Components (Optimized via Query)
+        // 2. Retrieve Components
         final var holder = EntityUtils.toHolder(index, archetypeChunk);
         final var npc = holder.getComponent(this.npcType);
         final var transform = holder.getComponent(this.transformType);
         
+        // Safety check (though archetype check above makes this robust)
+        if (npc == null || transform == null) return;
+
         // 3. Logic Throttle
         final var entityId = npc.getUuid();
         var data = LevelingCore.mobLevelRegistry.getOrCreateWithPersistence(
@@ -90,13 +102,13 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
         store.getExternalData().getWorld().execute(() -> {
             long currentTime = System.currentTimeMillis();
             
-            // UPDATE: Cache Timer reduced to 1 second (1000ms)
+            // Cache Timer (1s)
             if (currentTime - lastCacheUpdate > 1000 || cachedMaxLevel == -1) {
                 updateMaxLevelCache();
                 lastCacheUpdate = currentTime;
             }
 
-            // Calculate new level using cached max level
+            // Calculate new level
             var newLevel = Math.max(
                 1,
                 Math.min(cachedMaxLevel, MobLevelingUtil.computeDynamicLevel(config, npc, transform, store))
@@ -142,6 +154,8 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
     @NullableDecl
     @Override
     public Query<EntityStore> getQuery() {
-        return Query.all(NPCEntity.getComponentType(), TransformComponent.getComponentType());
+        // Reverting to Query.any() to guarantee compilation.
+        // The optimization is now handled manually at the top of tick().
+        return Query.any();
     }
 }
