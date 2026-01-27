@@ -3,6 +3,7 @@ package com.azuredoom.levelingcore.systems;
 import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
@@ -24,15 +25,23 @@ import com.azuredoom.levelingcore.utils.MobLevelingUtil;
 @SuppressWarnings("removal")
 public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
 
+    // Cache the max level calculation
     private static volatile int cachedMaxLevel = -1;
     private static volatile long lastCacheUpdate = 0;
     
+    // Global throttling for save operations
     private static volatile long lastSaveTime = 0;
 
     private Config<GUIConfig> config;
+    
+    // Cached Component Types for fast Querying
+    private final ComponentType<NPCEntity> npcType;
+    private final ComponentType<TransformComponent> transformType;
 
     public MobLevelSystem(Config<GUIConfig> config) {
         this.config = config;
+        this.npcType = NPCEntity.getComponentType();
+        this.transformType = TransformComponent.getComponentType();
     }
 
     @Override
@@ -43,9 +52,9 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
         @NonNullDecl Store<EntityStore> store,
         @NonNullDecl CommandBuffer<EntityStore> commandBuffer
     ) {
+        // 1. Global Periodic Save (Kept at 10s for performance safety)
         if (index == 0) {
             long now = System.currentTimeMillis();
-            // Save every 10 seconds (10000ms)
             if (now - lastSaveTime > 10000) {
                 lastSaveTime = now;
                 var world = store.getExternalData().getWorld();
@@ -55,16 +64,13 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
             }
         }
 
+        // 2. Retrieve Components (Optimized via Query)
         final var holder = EntityUtils.toHolder(index, archetypeChunk);
-        final var npc = holder.getComponent(NPCEntity.getComponentType());
-        if (npc == null) return;
+        final var npc = holder.getComponent(this.npcType);
+        final var transform = holder.getComponent(this.transformType);
         
-        final var transform = holder.getComponent(TransformComponent.getComponentType());
-        if (transform == null) return;
-        
-
+        // 3. Logic Throttle
         final var entityId = npc.getUuid();
-
         var data = LevelingCore.mobLevelRegistry.getOrCreateWithPersistence(
             entityId,
             () -> MobLevelingUtil.computeSpawnLevel(npc),
@@ -74,18 +80,23 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
 
         if (data.locked) return;
 
+        // Check if 2 seconds have passed since last update for this specific mob
         long nowMs = System.currentTimeMillis();
         if (nowMs - data.lastRecalcTick < 2000) {
             return;
         }
 
+        // 4. Execution
         store.getExternalData().getWorld().execute(() -> {
             long currentTime = System.currentTimeMillis();
-            if (currentTime - lastCacheUpdate > 10000 || cachedMaxLevel == -1) {
+            
+            // UPDATE: Cache Timer reduced to 1 second (1000ms)
+            if (currentTime - lastCacheUpdate > 1000 || cachedMaxLevel == -1) {
                 updateMaxLevelCache();
                 lastCacheUpdate = currentTime;
             }
 
+            // Calculate new level using cached max level
             var newLevel = Math.max(
                 1,
                 Math.min(cachedMaxLevel, MobLevelingUtil.computeDynamicLevel(config, npc, transform, store))
@@ -97,6 +108,7 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
             }
             data.lastRecalcTick = currentTime;
 
+            // Apply scaling if needed
             if (data.level != data.lastAppliedLevel) {
                 MobLevelingUtil.applyMobScaling(config, npc, data.level, store);
                 data.lastAppliedLevel = data.level;
@@ -130,6 +142,6 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
     @NullableDecl
     @Override
     public Query<EntityStore> getQuery() {
-        return Query.any();
+        return Query.all(NPCEntity.getComponentType(), TransformComponent.getComponentType());
     }
 }
