@@ -23,6 +23,9 @@ import com.azuredoom.levelingcore.level.mobs.MobLevelRegistry;
 public class MobLevelingUtil {
 
     private static final MobLevelRegistry registry = LevelingCore.mobLevelRegistry;
+    
+    // Optimization: Constant key to prevent string allocation every scaling call
+    private static final String MODIFIER_KEY = "LevelingCore_mob_health";
 
     public MobLevelingUtil() {}
 
@@ -32,122 +35,118 @@ public class MobLevelingUtil {
         TransformComponent transform,
         Store<EntityStore> store
     ) {
-        var modeStr = config.get().getLevelMode();
-
+        String modeStr = config.get().getLevelMode();
         if (modeStr == null) {
             return computeNearbyPlayersMeanLevel(transform, store);
         }
 
-        return CoreLevelMode.fromString(modeStr)
-            .map(mode -> switch (mode) {
-                case SPAWN_ONLY ->
-                    registry.get(npc.getUuid()).level;
-                case NEARBY_PLAYERS_MEAN ->
-                    computeNearbyPlayersMeanLevel(transform, store);
-                case BIOME ->
-                    computeBiomeLevel(store);
-                case ZONE ->
-                    computeZoneLevel(store);
-                case INSTANCE ->
-                    computeInstanceLevel(store);
-            })
-            .orElseGet(() -> {
-                LevelingCore.LOGGER.at(Level.INFO)
-                    .log("Unknown level mode " + modeStr + " defaulting to NEARBY_PLAYERS_MEAN");
-                return computeNearbyPlayersMeanLevel(transform, store);
-            });
+        // Optimization: Standard switch is faster than Optional/Lambda chains in hot loops
+        CoreLevelMode mode = CoreLevelMode.fromString(modeStr).orElse(null);
+        if (mode == null) {
+            LevelingCore.LOGGER.at(Level.INFO).log("Unknown level mode " + modeStr + " defaulting to NEARBY_PLAYERS_MEAN");
+            return computeNearbyPlayersMeanLevel(transform, store);
+        }
+
+        return switch (mode) {
+            case SPAWN_ONLY -> registry.get(npc.getUuid()).level;
+            case NEARBY_PLAYERS_MEAN -> computeNearbyPlayersMeanLevel(transform, store);
+            case BIOME -> computeBiomeLevel(store);
+            case ZONE -> computeZoneLevel(store);
+            case INSTANCE -> computeInstanceLevel(store);
+        };
     }
 
     public static void applyMobScaling(Config<GUIConfig> config, NPCEntity npc, int level, Store<EntityStore> store) {
-        var healthMult = 1F + ((float) level - 1F) * config.get().getMobHealthMultiplier();
+        float healthMult = 1F + ((float) level - 1F) * config.get().getMobHealthMultiplier();
 
         var stats = store.getComponent(npc.getReference(), EntityStatMap.getComponentType());
+        if (stats == null) return;
+
         var healthIndex = DefaultEntityStatTypes.getHealth();
+        
+        // Optimization: Use the static MODIFIER_KEY
         var modifier = new StaticModifier(
             Modifier.ModifierTarget.MAX,
             StaticModifier.CalculationType.ADDITIVE,
             healthMult
         );
-        var modifierKey = "LevelingCore_mob_health";
-        stats.putModifier(healthIndex, modifierKey, modifier);
+        
+        stats.putModifier(healthIndex, MODIFIER_KEY, modifier);
         stats.maximizeStatValue(EntityStatMap.Predictable.SELF, DefaultEntityStatTypes.getHealth());
         stats.update();
     }
 
     public static int computeSpawnLevel(NPCEntity npc) {
-        var seed = npc.getUuid().getMostSignificantBits() ^ npc.getUuid().getLeastSignificantBits();
+        var uuid = npc.getUuid();
+        var seed = uuid.getMostSignificantBits() ^ uuid.getLeastSignificantBits();
         var rng = new Random(seed);
-        final var spawnMin = 1;
-        final var spawnMax = 10;
-
-        return spawnMin + rng.nextInt((spawnMax - spawnMin) + 1);
+        return 1 + rng.nextInt(10); // simplified 1 to 10 logic
     }
 
     public static int computeInstanceLevel(Store<EntityStore> store) {
         var world = store.getExternalData().getWorld();
         var instanceName = world.getName();
-        var instanceMapping = LevelingCore.mobInstanceMapping;
-
-        if (instanceName.isBlank()) {
-            LevelingCore.LOGGER.at(Level.WARNING).log("World instance name was null/blank; defaulting to 0");
-            return 0;
+        if (instanceName == null || instanceName.isBlank()) {
+            return 1;
         }
-
-        return instanceMapping.getOrDefault(instanceName.toLowerCase(), 1);
+        return LevelingCore.mobInstanceMapping.getOrDefault(instanceName.toLowerCase(), 1);
     }
 
     public static int computeZoneLevel(Store<EntityStore> store) {
         var world = store.getExternalData().getWorld();
-        var worldMapTracker = world.getPlayers().getFirst().getWorldMapTracker();
+        var players = world.getPlayers();
+        
+        // Safety check: world.getPlayers().getFirst() crashes if server is empty
+        if (players.isEmpty()) return 1;
+        
+        var worldMapTracker = players.iterator().next().getWorldMapTracker();
         var currentZone = worldMapTracker.getCurrentZone();
-        if (currentZone == null)
-            return 0;
-        var zoneMapping = LevelingCore.mobZoneMapping;
+        if (currentZone == null) return 1;
 
-        return zoneMapping.getOrDefault(currentZone.zoneName().toLowerCase(), 1);
+        return LevelingCore.mobZoneMapping.getOrDefault(currentZone.zoneName().toLowerCase(), 1);
     }
 
     public static int computeBiomeLevel(Store<EntityStore> store) {
         var world = store.getExternalData().getWorld();
-        var worldMapTracker = world.getPlayers().getFirst().getWorldMapTracker();
+        var players = world.getPlayers();
+
+        // Safety check: world.getPlayers().getFirst() crashes if server is empty
+        if (players.isEmpty()) return 1;
+
+        var worldMapTracker = players.iterator().next().getWorldMapTracker();
         var currentBiome = worldMapTracker.getCurrentBiomeName();
+        if (currentBiome == null) return 6;
 
-        if (currentBiome == null)
-            return 6;
-
-        var biomeMapping = LevelingCore.mobBiomeMapping;
-
-        return biomeMapping.getOrDefault(currentBiome.toLowerCase(), 1);
+        return LevelingCore.mobBiomeMapping.getOrDefault(currentBiome.toLowerCase(), 1);
     }
 
     public static int computeNearbyPlayersMeanLevel(TransformComponent transform, Store<EntityStore> store) {
         var world = store.getExternalData().getWorld();
-        var mobPos = transform.getPosition();
         var players = world.getPlayers();
-        var sum = 0;
-        var count = 0;
-        final var nearbyRadius = 40f;
-        final float nearbyRadiusSq = nearbyRadius * nearbyRadius;
-        final var fallbackNoPlayers = 5;
+        if (players.isEmpty()) return 5;
+
+        // Optimization: Fetch service once outside the loop
         var lvlOpt = LevelingCoreApi.getLevelServiceIfPresent();
-        if (lvlOpt == null || lvlOpt.isEmpty()) {
-            return 5;
-        }
+        if (lvlOpt.isEmpty()) return 5;
         var lvlService = lvlOpt.get();
 
+        var mobPos = transform.getPosition();
+        var sum = 0;
+        var count = 0;
+        final float radiusSq = 40f * 40f;
+
         for (var p : players) {
-            var pPos = p.getPlayerRef().getTransform().getPosition();
-            if (pPos.distanceSquaredTo(mobPos) <= nearbyRadiusSq) {
-                var lvl = lvlService.getLevel(p.getPlayerRef().getUuid());
-                sum += lvl;
+            var pRef = p.getPlayerRef();
+            // Optimization: Chain reduction
+            var pPos = pRef.getTransform().getPosition();
+            
+            if (pPos.distanceSquaredTo(mobPos) <= radiusSq) {
+                sum += lvlService.getLevel(pRef.getUuid());
                 count++;
             }
         }
 
-        if (count == 0)
-            return fallbackNoPlayers;
-
-        var mean = (double) sum / (double) count;
-        return (int) Math.round(mean);
+        if (count == 0) return 5;
+        return (int) Math.round((double) sum / (double) count);
     }
 }
