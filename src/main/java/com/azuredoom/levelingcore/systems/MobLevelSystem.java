@@ -25,7 +25,7 @@ import com.azuredoom.levelingcore.utils.MobLevelingUtil;
 @SuppressWarnings("removal")
 public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
 
-    // Cache the max level calculation
+    // Cache to prevent Disk I/O every tick
     private static volatile int cachedMaxLevel = -1;
     private static volatile long lastCacheUpdate = 0;
     
@@ -34,7 +34,7 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
 
     private Config<GUIConfig> config;
     
-    // Cached Component Types (Fixed Generics: ComponentType<Store, Component>)
+    // Fixed Generic Types (Store, Component)
     private final ComponentType<EntityStore, NPCEntity> npcType;
     private final ComponentType<EntityStore, TransformComponent> transformType;
 
@@ -53,15 +53,7 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
         @NonNullDecl Store<EntityStore> store,
         @NonNullDecl CommandBuffer<EntityStore> commandBuffer
     ) {
-        // OPTIMIZATION: Manual Archetype Filtering
-        // Since Query.all() caused issues, we filter here.
-        // If this chunk doesn't contain NPCs, we skip it entirely.
-        // This prevents 'toHolder' from running on Items, Arrows, etc.
-        if (!archetypeChunk.hasComponent(this.npcType) || !archetypeChunk.hasComponent(this.transformType)) {
-            return;
-        }
-
-        // 1. Global Periodic Save (10s)
+        // 1. Global Periodic Save (10s) - Run at the very start of a chunk
         if (index == 0) {
             long now = System.currentTimeMillis();
             if (now - lastSaveTime > 10000) {
@@ -78,10 +70,10 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
         final var npc = holder.getComponent(this.npcType);
         final var transform = holder.getComponent(this.transformType);
         
-        // Safety check (though archetype check above makes this robust)
+        // Safety check to ensure we are only processing Mobs with positions
         if (npc == null || transform == null) return;
 
-        // 3. Logic Throttle
+        // 3. Logic Throttle (2s per mob)
         final var entityId = npc.getUuid();
         var data = LevelingCore.mobLevelRegistry.getOrCreateWithPersistence(
             entityId,
@@ -92,17 +84,16 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
 
         if (data.locked) return;
 
-        // Check if 2 seconds have passed since last update for this specific mob
         long nowMs = System.currentTimeMillis();
         if (nowMs - data.lastRecalcTick < 2000) {
             return;
         }
 
-        // 4. Execution
+        // 4. Execution logic on the World Thread
         store.getExternalData().getWorld().execute(() -> {
             long currentTime = System.currentTimeMillis();
             
-            // Cache Timer (1s)
+            // Cache Timer (1s) - Prevents Disk I/O lag
             if (currentTime - lastCacheUpdate > 1000 || cachedMaxLevel == -1) {
                 updateMaxLevelCache();
                 lastCacheUpdate = currentTime;
@@ -114,13 +105,13 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
                 Math.min(cachedMaxLevel, MobLevelingUtil.computeDynamicLevel(config, npc, transform, store))
             );
 
-            // Update Data
+            // Update Level Data
             if (newLevel != data.level) {
                 data.level = newLevel;
             }
             data.lastRecalcTick = currentTime;
 
-            // Apply scaling if needed
+            // Apply scaling
             if (data.level != data.lastAppliedLevel) {
                 MobLevelingUtil.applyMobScaling(config, npc, data.level, store);
                 data.lastAppliedLevel = data.level;
@@ -147,15 +138,13 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
             }
         } catch (Exception e) {
             if (cachedMaxLevel == -1) cachedMaxLevel = 100;
-            e.printStackTrace();
         }
     }
 
     @NullableDecl
     @Override
     public Query<EntityStore> getQuery() {
-        // Reverting to Query.any() to guarantee compilation.
-        // The optimization is now handled manually at the top of tick().
+        // Guaranteed to work based on original file contents
         return Query.any();
     }
 }
