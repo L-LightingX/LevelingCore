@@ -24,7 +24,10 @@ import com.azuredoom.levelingcore.utils.MobLevelingUtil;
 @SuppressWarnings("removal")
 public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
 
-    private long tickCounter = 0;
+    private static volatile int cachedMaxLevel = -1;
+    private static volatile long lastCacheUpdate = 0;
+    
+    private static volatile long lastSaveTime = 0;
 
     private Config<GUIConfig> config;
 
@@ -40,67 +43,88 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
         @NonNullDecl Store<EntityStore> store,
         @NonNullDecl CommandBuffer<EntityStore> commandBuffer
     ) {
-        if (index == 0)
-            tickCounter++;
-        var nowTick = tickCounter;
+        if (index == 0) {
+            long now = System.currentTimeMillis();
+            // Save every 10 seconds (10000ms)
+            if (now - lastSaveTime > 10000) {
+                lastSaveTime = now;
+                var world = store.getExternalData().getWorld();
+                if (world != null) {
+                    world.execute(LevelingCore.mobLevelPersistence::save);
+                }
+            }
+        }
+
         final var holder = EntityUtils.toHolder(index, archetypeChunk);
         final var npc = holder.getComponent(NPCEntity.getComponentType());
-        if (npc == null)
-            return;
+        if (npc == null) return;
+        
         final var transform = holder.getComponent(TransformComponent.getComponentType());
-        if (transform == null)
-            return;
+        if (transform == null) return;
+        
+
         final var entityId = npc.getUuid();
+
         var data = LevelingCore.mobLevelRegistry.getOrCreateWithPersistence(
             entityId,
             () -> MobLevelingUtil.computeSpawnLevel(npc),
-            nowTick,
+            0, 
             LevelingCore.mobLevelPersistence
         );
-        if (data.locked)
-            return;
-        var recalcEveryTicks = 40;
-        if (nowTick - data.lastRecalcTick < recalcEveryTicks)
-            return;
 
-        if (index == 0) {
-            tickCounter++;
+        if (data.locked) return;
 
-            if (tickCounter % 200 == 0) {
-                var world = store.getExternalData().getWorld();
-                world.execute(LevelingCore.mobLevelPersistence::save);
-            }
+        long nowMs = System.currentTimeMillis();
+        if (nowMs - data.lastRecalcTick < 2000) {
+            return;
         }
+
         store.getExternalData().getWorld().execute(() -> {
-            int mobMaxLevel;
-            var interalConfig = ConfigManager.loadOrCreate(LevelingCore.configPath);
-            var type = interalConfig.formula.type.trim().toUpperCase(Locale.ROOT);
-            if (type.equals("LINEAR")) {
-                mobMaxLevel = interalConfig.formula.linear.maxLevel;
-            } else if (type.equals("TABLE")) {
-                var tableFormula = LevelTableLoader.loadOrCreateFromDataDir(
-                    interalConfig.formula.table.file
-                );
-                mobMaxLevel = Math.max(1, tableFormula.getMaxLevel());
-            } else if (type.equals("CUSTOM")) {
-                mobMaxLevel = interalConfig.formula.custom.maxLevel;
-            } else {
-                mobMaxLevel = interalConfig.formula.exponential.maxLevel;
+            long currentTime = System.currentTimeMillis();
+            if (currentTime - lastCacheUpdate > 10000 || cachedMaxLevel == -1) {
+                updateMaxLevelCache();
+                lastCacheUpdate = currentTime;
             }
+
             var newLevel = Math.max(
                 1,
-                Math.min(mobMaxLevel, MobLevelingUtil.computeDynamicLevel(config, npc, transform, store))
+                Math.min(cachedMaxLevel, MobLevelingUtil.computeDynamicLevel(config, npc, transform, store))
             );
 
-            if (newLevel != data.level)
+            // Update Data
+            if (newLevel != data.level) {
                 data.level = newLevel;
-            data.lastRecalcTick = nowTick;
+            }
+            data.lastRecalcTick = currentTime;
 
             if (data.level != data.lastAppliedLevel) {
                 MobLevelingUtil.applyMobScaling(config, npc, data.level, store);
                 data.lastAppliedLevel = data.level;
             }
         });
+    }
+
+    private synchronized void updateMaxLevelCache() {
+        try {
+            var internalConfig = ConfigManager.loadOrCreate(LevelingCore.configPath);
+            var type = internalConfig.formula.type.trim().toUpperCase(Locale.ROOT);
+            
+            if (type.equals("LINEAR")) {
+                cachedMaxLevel = internalConfig.formula.linear.maxLevel;
+            } else if (type.equals("TABLE")) {
+                var tableFormula = LevelTableLoader.loadOrCreateFromDataDir(
+                    internalConfig.formula.table.file
+                );
+                cachedMaxLevel = Math.max(1, tableFormula.getMaxLevel());
+            } else if (type.equals("CUSTOM")) {
+                cachedMaxLevel = internalConfig.formula.custom.maxLevel;
+            } else {
+                cachedMaxLevel = internalConfig.formula.exponential.maxLevel;
+            }
+        } catch (Exception e) {
+            if (cachedMaxLevel == -1) cachedMaxLevel = 100;
+            e.printStackTrace();
+        }
     }
 
     @NullableDecl
