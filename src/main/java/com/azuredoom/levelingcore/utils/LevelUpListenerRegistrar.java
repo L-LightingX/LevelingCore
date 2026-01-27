@@ -32,49 +32,60 @@ public final class LevelUpListenerRegistrar {
         PlayerRef playerRef,
         Config<GUIConfig> config
     ) {
-        UUID id = playerRef.getUuid();
-        if (!REGISTERED.add(id))
+        // OPTIMIZATION: Check config before marking as registered
+        if (!config.get().isEnableStatLeveling()) {
             return;
-
-        var world = player.getWorld();
-        var worldStore = world.getEntityStore();
-        var levelupSound = SoundEvent.getAssetMap().getIndex(config.get().getLevelUpSound());
+        }
 
         LevelingCoreApi.getLevelServiceIfPresent().ifPresent(levelService -> {
-            if (!config.get().isEnableStatLeveling())
+            UUID id = playerRef.getUuid();
+            
+            // OPTIMIZATION: Only mark as registered if the API is present and ready
+            if (!REGISTERED.add(id)) {
                 return;
+            }
+
+            var world = player.getWorld();
+            var worldStore = world.getEntityStore();
+            final int levelupSoundIndex = SoundEvent.getAssetMap().getIndex(config.get().getLevelUpSound());
 
             store.getExternalData()
                 .getWorld()
                 .execute(() -> levelService.registerLevelUpListener((playerId, oldLevel, newLevel) -> {
-                    if (!playerId.equals(id))
+                    // SECURITY: Ensure the event is for this specific player
+                    if (!playerId.equals(id)) {
                         return;
+                    }
 
                     StatsUtils.applyAllStats(store, player, newLevel, config);
 
                     world.execute(() -> {
-                        if (player.getReference() == null)
-                            return;
+                        if (player.getReference() == null) return;
+                        
                         var transform = worldStore.getStore()
                             .getComponent(playerRef.getReference(), EntityModule.get().getTransformComponentType());
-                        SoundUtil.playSoundEvent3dToPlayer(
-                            player.getReference(),
-                            levelupSound,
-                            SoundCategory.UI,
-                            transform.getPosition(),
-                            worldStore.getStore()
-                        );
+                        
+                        if (transform != null) {
+                            SoundUtil.playSoundEvent3dToPlayer(
+                                player.getReference(),
+                                levelupSoundIndex,
+                                SoundCategory.UI,
+                                transform.getPosition(),
+                                worldStore.getStore()
+                            );
+                        }
                     });
+
                     if (config.get().isEnableLevelUpRewardsConfig()) {
                         for (int lvl = oldLevel + 1; lvl <= newLevel; lvl++) {
                             LevelUpRewardsUtil.giveRewards(lvl, player);
                         }
                     }
+
                     if (!config.get().isDisableStatPointGainOnLevelUp()) {
                         int pointsPerLevel;
                         if (config.get().isUseStatsPerLevelMapping()) {
-                            var mapping = LevelingCore.apMap;
-                            pointsPerLevel = mapping.getOrDefault(newLevel, 5);
+                            pointsPerLevel = LevelingCore.apMap.getOrDefault(newLevel, 5);
                         } else {
                             pointsPerLevel = config.get().getStatsPerLevel();
                         }
@@ -87,6 +98,8 @@ public final class LevelUpListenerRegistrar {
                                 .param("player_name", playerRef.getUsername())
                         );
                     }
+                    
+                    // Reset the alternate state to allow toggling
                     LevelDownListenerRegistrar.clear(playerId);
                     XPBarHud.updateHud(playerRef);
                 }));
