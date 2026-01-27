@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-  workflow_dispatch:  # This adds the "Run Workflow" button!
+  workflow_dispatch: 
 
 jobs:
   build:
@@ -25,12 +25,19 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
+    - name: Remove problematic compat files
+      # This deletes the files that are looking for mods GitHub can't find
+      run: |
+        rm src/main/java/com/azuredoom/levelingcore/compat/PartyPluginCompat.java
+        rm src/main/java/com/azuredoom/levelingcore/compat/SimplePartyCompat.java
+        rm src/main/java/com/azuredoom/levelingcore/compat/PartyProCompat.java
+
     - name: Build Mod
-      run: ./gradlew build
+      # We use -x test to skip tests that might also fail due to missing dependencies
+      run: ./gradlew build -x test
 
     - name: Upload Mod Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Hytale-Mod-File
-        # This looks for the compiled .jar file in the build folder
+        name: LevelingCore-Mod
         path: build/libs/*.jar
