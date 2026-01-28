@@ -53,13 +53,16 @@ public class MobLevelingUtil {
     }
 
     public static void applyMobScaling(Config<GUIConfig> config, NPCEntity npc, int level, Store<EntityStore> store) {
-        // ANIMATION FIX: Do not scale dead mobs. This prevents the reset-to-idle glitch.
-        if (npc.getHealth() <= 0) return;
-
-        float healthMult = 1F + ((float) level - 1F) * config.get().getMobHealthMultiplier();
         var stats = store.getComponent(npc.getReference(), EntityStatMap.getComponentType());
         if (stats == null) return;
 
+        // ANIMATION FIX: Check health via stats map. Do not scale dead mobs.
+        var healthStat = stats.get(DefaultEntityStatTypes.getHealth());
+        if (healthStat != null && healthStat.get() <= 0) {
+            return;
+        }
+
+        float healthMult = 1F + ((float) level - 1F) * config.get().getMobHealthMultiplier();
         var healthIndex = DefaultEntityStatTypes.getHealth();
         var modifier = new StaticModifier(
             Modifier.ModifierTarget.MAX,
@@ -89,8 +92,6 @@ public class MobLevelingUtil {
     public static int computeZoneLevel(Store<EntityStore> store) {
         var world = store.getExternalData().getWorld();
         var players = world.getPlayers();
-        
-        // CRASH FIX: Safety check for empty servers
         if (players.isEmpty()) return 1;
         
         var worldMapTracker = players.iterator().next().getWorldMapTracker();
@@ -103,8 +104,6 @@ public class MobLevelingUtil {
     public static int computeBiomeLevel(Store<EntityStore> store) {
         var world = store.getExternalData().getWorld();
         var players = world.getPlayers();
-
-        // CRASH FIX: Safety check for empty servers
         if (players.isEmpty()) return 1;
 
         var worldMapTracker = players.iterator().next().getWorldMapTracker();
@@ -126,7 +125,7 @@ public class MobLevelingUtil {
         var mobPos = transform.getPosition();
         var sum = 0;
         var count = 0;
-        final float radiusSq = 1600f; // 40 * 40
+        final float radiusSq = 1600f;
 
         for (var p : players) {
             var pRef = p.getPlayerRef();
