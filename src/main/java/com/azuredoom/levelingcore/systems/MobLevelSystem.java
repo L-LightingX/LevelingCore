@@ -72,7 +72,14 @@ public class MobLevelSystem extends EntityTickingSystem<EntityStore> {
         // We can safely get these without null checks because of the Query
         final var npc = holder.getComponent(this.npcType);
         final var transform = holder.getComponent(this.transformType);
-        if (npc.getHealth() <= 0) return;
+        // ANIMATION FIX: Fetch Health from EntityStatMap to avoid "Snap Back" glitch
+        var stats = holder.getComponent(EntityStatMap.getComponentType());
+        if (stats != null) {
+            var healthValue = stats.get(DefaultEntityStatTypes.getHealth());
+            if (healthValue != null && healthValue.get() <= 0) {
+                return;
+            }
+        }
         // 3. Logic Throttle (2s per mob)
         final var entityId = npc.getUuid();
         var data = LevelingCore.mobLevelRegistry.getOrCreateWithPersistence(
