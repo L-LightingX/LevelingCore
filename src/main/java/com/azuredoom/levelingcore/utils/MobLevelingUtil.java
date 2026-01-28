@@ -23,8 +23,6 @@ import com.azuredoom.levelingcore.level.mobs.MobLevelRegistry;
 public class MobLevelingUtil {
 
     private static final MobLevelRegistry registry = LevelingCore.mobLevelRegistry;
-    
-    // Optimization: Constant key to prevent string allocation every scaling call
     private static final String MODIFIER_KEY = "LevelingCore_mob_health";
 
     public MobLevelingUtil() {}
@@ -40,10 +38,8 @@ public class MobLevelingUtil {
             return computeNearbyPlayersMeanLevel(transform, store);
         }
 
-        // Optimization: Standard switch is faster than Optional/Lambda chains in hot loops
         CoreLevelMode mode = CoreLevelMode.fromString(modeStr).orElse(null);
         if (mode == null) {
-            LevelingCore.LOGGER.at(Level.INFO).log("Unknown level mode " + modeStr + " defaulting to NEARBY_PLAYERS_MEAN");
             return computeNearbyPlayersMeanLevel(transform, store);
         }
 
@@ -57,14 +53,14 @@ public class MobLevelingUtil {
     }
 
     public static void applyMobScaling(Config<GUIConfig> config, NPCEntity npc, int level, Store<EntityStore> store) {
-        float healthMult = 1F + ((float) level - 1F) * config.get().getMobHealthMultiplier();
+        // ANIMATION FIX: Do not scale dead mobs. This prevents the reset-to-idle glitch.
+        if (npc.getHealth() <= 0) return;
 
+        float healthMult = 1F + ((float) level - 1F) * config.get().getMobHealthMultiplier();
         var stats = store.getComponent(npc.getReference(), EntityStatMap.getComponentType());
         if (stats == null) return;
 
         var healthIndex = DefaultEntityStatTypes.getHealth();
-        
-        // Optimization: Use the static MODIFIER_KEY
         var modifier = new StaticModifier(
             Modifier.ModifierTarget.MAX,
             StaticModifier.CalculationType.ADDITIVE,
@@ -80,15 +76,13 @@ public class MobLevelingUtil {
         var uuid = npc.getUuid();
         var seed = uuid.getMostSignificantBits() ^ uuid.getLeastSignificantBits();
         var rng = new Random(seed);
-        return 1 + rng.nextInt(10); // simplified 1 to 10 logic
+        return 1 + rng.nextInt(10);
     }
 
     public static int computeInstanceLevel(Store<EntityStore> store) {
         var world = store.getExternalData().getWorld();
         var instanceName = world.getName();
-        if (instanceName == null || instanceName.isBlank()) {
-            return 1;
-        }
+        if (instanceName == null || instanceName.isBlank()) return 1;
         return LevelingCore.mobInstanceMapping.getOrDefault(instanceName.toLowerCase(), 1);
     }
 
@@ -96,7 +90,7 @@ public class MobLevelingUtil {
         var world = store.getExternalData().getWorld();
         var players = world.getPlayers();
         
-        // Safety check: world.getPlayers().getFirst() crashes if server is empty
+        // CRASH FIX: Safety check for empty servers
         if (players.isEmpty()) return 1;
         
         var worldMapTracker = players.iterator().next().getWorldMapTracker();
@@ -110,7 +104,7 @@ public class MobLevelingUtil {
         var world = store.getExternalData().getWorld();
         var players = world.getPlayers();
 
-        // Safety check: world.getPlayers().getFirst() crashes if server is empty
+        // CRASH FIX: Safety check for empty servers
         if (players.isEmpty()) return 1;
 
         var worldMapTracker = players.iterator().next().getWorldMapTracker();
@@ -125,7 +119,6 @@ public class MobLevelingUtil {
         var players = world.getPlayers();
         if (players.isEmpty()) return 5;
 
-        // Optimization: Fetch service once outside the loop
         var lvlOpt = LevelingCoreApi.getLevelServiceIfPresent();
         if (lvlOpt.isEmpty()) return 5;
         var lvlService = lvlOpt.get();
@@ -133,13 +126,13 @@ public class MobLevelingUtil {
         var mobPos = transform.getPosition();
         var sum = 0;
         var count = 0;
-        final float radiusSq = 40f * 40f;
+        final float radiusSq = 1600f; // 40 * 40
 
         for (var p : players) {
             var pRef = p.getPlayerRef();
-            // Optimization: Chain reduction
-            var pPos = pRef.getTransform().getPosition();
+            if (pRef == null || pRef.getTransform() == null) continue;
             
+            var pPos = pRef.getTransform().getPosition();
             if (pPos.distanceSquaredTo(mobPos) <= radiusSq) {
                 sum += lvlService.getLevel(pRef.getUuid());
                 count++;
